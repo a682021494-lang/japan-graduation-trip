@@ -9,3 +9,36 @@
 .detail-cover{height:auto}.compare-table .card-visual{height:91px;font-size:12px}.saved-link.active{border-color:#b54038;color:#b54038}
 
 .day-blocks{display:grid;grid-template-columns:44px 1fr;gap:4px 10px;margin:8px 0;font-size:13px;color:var(--dim)}.day-blocks dt{font-weight:750}.day-blocks dd{margin:0}
+
+/* Account and group controls use the trip site's existing colors and components. */
+.head-tools{display:flex;gap:8px;align-items:center}
+#account{position:relative;white-space:nowrap}
+#account .btn{min-height:38px}
+.google-g{color:#4285f4;font-weight:900;font-family:Arial,sans-serif;font-size:16px}
+.account-menu summary{border:1px solid var(--line);border-radius:6px;padding:5px 8px;display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none}
+.account-menu summary::-webkit-details-marker{display:none}
+.account-menu summary:after{content:"▾";font-size:10px;color:var(--dim)}
+.account-name{font-size:13px;max-width:75px;overflow:hidden;text-overflow:ellipsis}
+.avatar{display:block;flex:none;inline-size:26px;block-size:26px;border-radius:50%;object-fit:cover;background:#e6eff8}
+.avatar-initial{display:grid;place-items:center;font-size:13px;font-weight:800}
+.avatar-large{inline-size:64px;block-size:64px;font-size:25px}
+.account-links{position:absolute;z-index:7;inset-inline-end:0;inset-block-start:calc(100% + 8px);width:170px;padding:6px;border:1px solid var(--line);background:white;border-radius:8px;box-shadow:0 10px 32px #10233a24}
+.account-links>*{display:block;width:100%;text-align:left;padding:8px;border-radius:4px;font-size:13px;color:var(--ink)}
+.account-links>*:hover{background:#edf3f8}
+.footer-links{display:flex;gap:10px 18px;flex-wrap:wrap}
+.group-page .notice code{overflow-wrap:anywhere}
+.group-page button[aria-pressed=true]{border-color:#266b9b;color:#235578;background:#e9f4ff}
+.cloud-list{margin:0;padding:0;list-style:none}
+.cloud-list li{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line)}
+.cloud-list a{color:#28567c;font-weight:700}
+.cloud-list .btn{min-height:32px;padding:5px 8px}
+.cloud-edit{border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.cloud-edit summary{cursor:pointer;font-weight:700;overflow-wrap:anywhere}
+.cloud-edit form,.cloud-edit p{margin-top:12px}
+.group-page :is(p,li){overflow-wrap:anywhere}
+input[type=time]{font:inherit}
+@media (max-width:1040px){.site-head nav{gap:9px}}
+@media (min-width:901px) and (max-width:1080px){.head-tools .saved-link span,.account-name{display:none}}
+@media (max-width:620px){.head-inner{gap:6px}.head-tools{gap:5px}.account-name{display:none}#account .btn{padding:5px 6px;font-size:11px;gap:4px}.account-menu summary{padding:5px}.footer-links{gap:7px 13px}}
+
+.group-opinion{display:grid!important;justify-content:stretch!important;gap:0!important}.group-opinion p{white-space:pre-wrap}

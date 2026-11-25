@@ -1,0 +1,8 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    { "collectionGroup": "items", "fieldPath": "payload", "indexes": [] },
+    { "collectionGroup": "schedule", "fieldPath": "memo", "indexes": [] },
+    { "collectionGroup": "expenses", "fieldPath": "entries", "indexes": [] }
+  ]
+}

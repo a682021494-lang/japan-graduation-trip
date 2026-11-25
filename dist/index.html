@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#10233a">
 <meta name="description" content="2027년 겨울 일본 졸업여행. 전국 여행지 비교, 일정 편집과 예산 계산.">
 <title>JAPAN TRIP 2027 · 일본 졸업여행</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%2310233a%27/%3E%3Cpath d=%27m5 23 10-15 4 6 2-3 7 12H5Z%27 fill=%27none%27 stroke=%27white%27 stroke-width=%272%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 <script type="module" src="app.js"></script>
 </head>
@@ -17,10 +18,10 @@
 <nav aria-label="주 메뉴">
 <a href="#home">홈</a><a href="#explore">전국 여행지</a><a href="#map">일본 지도</a><a href="#compare">여행지 비교</a><a href="#plan">여행 일정</a><a href="#budget">예산 계산기</a><a href="#prep">여행 준비물</a>
 </nav>
-<a href="#saved" class="saved-link">♡ <span>나의 여행 후보</span> <b id="saved-count">0</b></a>
+<div class="head-tools"><a href="#saved" class="saved-link" aria-label="나의 여행 후보">♡ <span>나의 여행 후보</span> <b id="saved-count">0</b></a><div id="account"><a href="#groups" class="btn">친구들과 여행</a></div></div>
 </div></header>
 <main id="main" tabindex="-1"><p class="wrap loading">여행 정보를 불러오는 중입니다.</p></main>
-<footer><div class="wrap footer-inner"><a class="brand" href="#home">JAPAN TRIP <b>2027</b></a><span>2027년 1–2월 · 대중교통 자유여행 가이드</span><a href="#sources">정보 및 이미지 출처</a></div></footer>
+<footer><div class="wrap footer-inner"><a class="brand" href="#home">JAPAN TRIP <b>2027</b></a><span>2027년 1–2월 · 대중교통 자유여행 가이드</span><div class="footer-links"><a href="#groups">친구들과 여행</a><a href="#sources">정보 및 이미지 출처</a><a href="#privacy">개인정보 처리방침</a></div></div></footer>
 <dialog id="dialog"><button id="close-dialog" class="icon" aria-label="닫기">×</button><div id="dialog-body"></div></dialog>
 <div id="status" role="status" aria-live="polite"></div>
 </body>

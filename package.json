@@ -4,7 +4,20 @@
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8000 --directory dist",
-    "build": "node scripts/check.mjs",
-    "test": "node --test scripts/check.mjs"
+    "build": "node scripts/build-cloud.mjs && node scripts/check.mjs",
+    "test": "node --test scripts/check.mjs",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-trip-2027 \"node --test scripts/firestore.test.mjs\"",
+    "test:cloud": "node --test scripts/cloud-model.test.mjs",
+    "dev:firebase": "npm run build && firebase emulators:start --project demo-trip-2027",
+    "test:browser": "node scripts/browser-smoke.mjs"
+  },
+  "dependencies": {
+    "firebase": "11.10.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "4.0.1",
+    "esbuild": "0.25.12",
+    "firebase-tools": "14.27.0",
+    "playwright": "1.62.1"
   }
 }

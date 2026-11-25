@@ -29,7 +29,12 @@ const routes = {
   prep:'0 / 23개 완료',
   saved:'JSON 내보내기',
   winter:'2월 4~11일',
-  sources:'OpenAI ImageGen'
+  sources:'OpenAI ImageGen',
+  profile:'내 프로필',
+  settings:'설정',
+  groups:'친구들과 여행',
+  'join/ABCDEF0123456789ABCDEF0123456789':'여행 그룹 초대',
+  privacy:'개인정보 처리방침'
 };
 for(const [route,expected] of Object.entries(routes)){
   location.hash='#'+route;

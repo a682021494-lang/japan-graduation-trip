@@ -1,3 +1,4 @@
+import { setupCloudUI } from './cloud-ui.js';
 import { calculate, parseImport, freshState, move, matches, formatMoney, numbers, budgetDefaults } from './logic.js';
 
 const main = document.querySelector('#main');
@@ -7,12 +8,14 @@ const status = document.querySelector('#status');
 const navigation = document.querySelector('nav');
 const menu = document.querySelector('#menu');
 const key = 'japan-trip-2027-v1';
-let state = freshState();
 let storageAvailable = true;
-try {
-  const saved = localStorage.getItem(key);
-  if (saved) state = parseImport(saved);
-} catch { storageAvailable = false; }
+function guestState() {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? parseImport(saved) : freshState();
+  } catch { storageAvailable = false;return freshState(); }
+}
+let state = guestState();
 
 const types = ['놀이공원','액티비티','애니메이션·게임','쇼핑','맛집','겨울 설경','온천','자연','바다','일본 전통문화','야경','가성비','소도시 여행'];
 const labels = ['놀거리','먹거리','쇼핑','가성비','사진 명소','겨울 여행','대중교통','친구 여행'];
@@ -222,7 +225,7 @@ const checkGroups = [
   ['챙길 물건',['여권','휴대전화','충전기','보조배터리','일본 콘센트용 변환 어댑터','겨울 외투','장갑','방한용품','상비약','세면도구','현금','카드']]
 ];
 function prepPage() {
-  return page('CHECKLIST','여행 준비물','체크한 내용은 이 브라우저에 저장됩니다.',`<div class="stack"><p class="notice" id="check-progress">${checkProgress()}</p>
+  return page('CHECKLIST','여행 준비물','체크한 내용은 '+cloud.storageText(),`<div class="stack"><p class="notice" id="check-progress">${checkProgress()}</p>
   <div class="two">${checkGroups.map(([name,items],i)=>`<section class="panel checklist"><h2>${name}</h2>${items.map((l,j)=>`<label><input type="checkbox" data-check="${i}-${j}" ${state.checks.includes(i+'-'+j)?'checked':''}>${l}</label>`).join('')}</section>`).join('')}</div>
   <section class="panel stack links"><h2>현지 주의사항</h2><p>일본 민법상 성년은 만 18세이며 음주 및 흡연은 만 20세부터 가능합니다. 미성년자와 고등학생의 숙박 가능 여부 및 보호자 동의서 양식은 예약 전에 숙소에 확인하세요. ${link('일본 정부 안내',sourceLinks.age)}</p>
   <p>일본 외무성은 한국을 단기 체류 사증 면제 대상에 포함합니다. 출국 전에 체류 목적과 본인의 여권 조건을 확인하세요. ${link('외무성 단기 체류 안내',sourceLinks.visa)} · ${link('Visit Japan Web',sourceLinks.visit)}</p>
@@ -251,7 +254,7 @@ function savedPage() {
     const m=k.match(/^(.+)-([01])$/);
     return m && byId.get(m[1])?.itineraries ? [[byId.get(m[1]),Number(m[2])]] : [];
   });
-  return page('SHORTLIST','나의 여행 후보','찜, 메모, 예산과 일정은 이 브라우저에 저장됩니다. 친구에게는 텍스트나 JSON 파일로 공유하세요.',`<div class="stack"><div class="panel stack">
+  return page('SHORTLIST','나의 여행 후보','찜, 메모, 예산과 일정은 '+cloud.storageText()+' 텍스트나 JSON 파일로 친구에게 공유할 수 있습니다.',`<div class="stack"><div class="panel stack">
   <div class="actions">${btn('후보·투표 문구 복사','copy-saved','','primary')}${btn('JSON 내보내기','export')}${btn('JSON 불러오기','import')}<input id="file-import" type="file" accept=".json,application/json" hidden><a class="btn" href="#compare">비교 보기 →</a></div><small>투표 문구는 친구들이 각자 번호를 답장할 수 있도록 생성합니다.</small></div>
   ${chosen.length?`<div class="attraction-grid">${chosen.map(d=>`<article class="attraction stack"><h2><a href="${detailHref(d.id)}">${esc(d.name)} →</a></h2><label>개인 메모<textarea data-note="${d.id}" rows="3" maxlength="2000">${esc(state.notes[d.id]||'')}</textarea></label><div class="row">${d.itineraries?compareButton(d):''}${btn('찜 해제','save',`data-id="${d.id}"`)}</div></article>`).join('')}</div>`:'<p class="panel empty">여행지의 하트 버튼을 눌러 후보를 추가하세요.</p>'}
   <section class="panel stack"><h2>저장한 관광지</h2>${places.length?places.map(([d,i])=>`<div class="row links">${link(d.attractions[i],mapLink(d.attractions[i],prefById.get(d.pref).name))}<small>${esc(d.name)}</small>${btn('삭제','attraction',`data-id="${d.id}" data-index="${i}"`)}</div>`).join(''):'<p class="muted">저장한 관광지가 없습니다.</p>'}</section>
@@ -268,6 +271,7 @@ function sourcesPage() {
   ${location.hostname?.endsWith('.chatgpt.site')?'<h2>프로젝트 파일</h2><p><a href="japan-graduation-trip-2027.zip" download>소스코드 및 정적 사이트 ZIP 다운로드</a></p>':''}<h2>이미지</h2><p>후지산 홈 배너와 오사카, 도쿄, 오타루, 후쿠오카, 오키나와, 후지산 카드의 시각 자료는 OpenAI ImageGen으로 제작한 AI 삽화입니다. 모두 프로젝트에 WebP 파일로 저장했습니다.</p></div>`);
 }
 function save() {
+  if(cloud.savePersonal(state)){count();return;}
   try {localStorage.setItem(key,JSON.stringify(state));storageAvailable=true;}
   catch {storageAvailable=false;announce('이 브라우저에 저장할 수 없습니다. JSON 내보내기로 보관하세요.');}
   count();
@@ -283,7 +287,12 @@ function render() {
   const [route='',arg]=location.hash.slice(1).split('/');
   const active=route||'home';
   const views={home,explore,map:mapPage,trip:()=>detail(byId.get(arg)),compare:comparePage,plan:planPage,budget:budgetPage,prep:prepPage,winter:winterPage,saved:savedPage,sources:sourcesPage};
-  main.innerHTML=(Object.hasOwn(views,active)?views[active]:home)();
+  main.innerHTML=cloud.hasRoute(active)?cloud.cloudPage(active,arg||''):(Object.hasOwn(views,active)?views[active]:home)();
+  if(cloud.locked()&&!cloud.hasRoute(active)) {
+    for(const element of main.querySelectorAll('[data-action="save"],[data-action="attraction"],[data-action="compare"],[data-action="reset-plan"],[data-action="move-day"],[data-action="move-stop"],[data-action="import"],[data-note],[data-memo],[data-check],[data-add-stop] input,[data-add-stop] button,#compare-choice button,#budget-form button')){
+      element.disabled=true;
+    }
+  }
   for(const a of document.querySelectorAll('nav a,.saved-link')){
     const current=a.hash==='#'+(active==='trip'?'explore':active);
     a.classList.toggle('active',current);
@@ -296,6 +305,7 @@ function go(route) {
 }
 function routeChanged() {
   const [route,arg]=location.hash.slice(1).split('/');
+  cloud.routeChanged(route,arg);
   if(route==='trip') selection.detailDays=0;
   if(route==='map'&&prefById.has(Number(arg))) setMapPref(Number(arg));
   navigation.classList.remove('open');menu.setAttribute('aria-expanded','false');
@@ -331,6 +341,12 @@ function itineraryText() {
   const d=byId.get(selection.planId);
   return [`일본 졸업여행 · ${d.name} · ${months[selection.planDays]}`,...planFor().map((day,i)=>`${i+1}일차: ${day.stops.join(' → ')}${day.memo?'\n메모: '+day.memo:''}`)].join('\n');
 }
+const cloud=setupCloudUI({
+  main,page,esc,render,refresh:()=>{if(data)render();},go,notify:announce,copy,getState:()=>state,guestState,
+  sessionChanged:next=>{state=next;if(byId&&!byId.get(state.budget.id)?.itineraries)state.budget.id=budgetDefaults.id;count();},
+  catalogue:()=>[...(destinations||[]),...(data?.cities||[])]
+});
+
 menu.addEventListener('click',()=>{
   const open=navigation.classList.toggle('open');
   menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'메뉴 닫기':'메뉴 열기');
@@ -344,9 +360,11 @@ main.addEventListener('error',e=>{
   }
 },true);
 main.addEventListener('click',event=>{
+  if(cloud.onClick(event))return;
   const el=event.target.closest('[data-action]');
   if(!el) return;
   const {action,id}=el.dataset;
+  if(cloud.locked()&&['save','attraction','compare','open-budget','move-day','move-stop','reset-plan','import','export'].includes(action)){announce('계정 데이터를 불러온 뒤 다시 시도해 주세요.');return;}
   const i=Number(el.dataset.index), j=Number(el.dataset.day);
   switch(action){
     case 'save': if(byId.has(id)){toggleList(state.saved,id);save();render();} break;
@@ -404,8 +422,10 @@ main.addEventListener('keydown',e=>{
   }
 });
 main.addEventListener('submit',e=>{
+  if(cloud.onSubmit(e))return;
   const form=e.target;
   e.preventDefault();
+  if(cloud.locked()&&(['compare-choice','budget-form'].includes(form.id)||form.hasAttribute('data-add-stop')))return;
   const values=Object.fromEntries(new FormData(form));
   if(form.id==='quick'){filters={q:'',region:'',pref:'',custom:'',sort:'rank',...values};go('explore');}
   if(form.id==='compare-choice') toggleCompare(values.city);
@@ -427,8 +447,8 @@ main.addEventListener('input',e=>{
     main.querySelector('#explore-results').innerHTML=exploreResults();
   }
   if(form?.id==='budget-form') main.querySelector('#budget-results').innerHTML=budgetResult(Object.fromEntries(new FormData(form)));
-  if(el.hasAttribute('data-memo')){const days=planFor();days[Number(el.dataset.memo)].memo=el.value;setPlan(days);}
-  if(el.hasAttribute('data-note')){state.notes[el.dataset.note]=el.value;save();}
+  if(!cloud.locked()&&el.hasAttribute('data-memo')){const days=planFor();days[Number(el.dataset.memo)].memo=el.value;setPlan(days);}
+  if(!cloud.locked()&&el.hasAttribute('data-note')){state.notes[el.dataset.note]=el.value;save();}
 });
 main.addEventListener('change',async e=>{
   const el=e.target,form=el.form;
@@ -442,15 +462,17 @@ main.addEventListener('change',async e=>{
   if(form?.id==='plan-choice'){selection.planId=el.value;render();}
   if(form?.id==='pref-choice'){setMapPref(Number(el.value));render();}
   if(form?.id==='marker-choice'){selection.mapId=el.value;selection.mapPref=byId.get(el.value)?.pref||0;render();}
-  if(el.hasAttribute('data-check')){
+  if(!cloud.locked()&&el.hasAttribute('data-check')){
     toggleList(state.checks,el.dataset.check);save();
     main.querySelector('#check-progress').textContent=checkProgress();
   }
-  if(el.id==='file-import'&&el.files[0]){
+  if(!cloud.locked()&&el.id==='file-import'&&el.files[0]){
     try {
+      const identity=cloud.identity();
       const imported=parseImport(await el.files[0].text());
+      if(cloud.identity()!==identity||cloud.locked())return;
       if(!byId.get(imported.budget.id)?.itineraries) imported.budget.id=budgetDefaults.id;
-      if(confirm('이 브라우저의 여행 데이터를 가져온 파일로 교체할까요?')){
+      if(confirm('현재 저장한 여행 데이터를 가져온 파일로 교체할까요?')){
         state=imported;save();render();if(storageAvailable) announce('여행 데이터를 불러왔습니다.');
       }
     } catch {announce('여행 데이터 JSON 파일을 확인해 주세요.');}
@@ -469,6 +491,7 @@ try {
   prefById=new Map(data.prefectures.map(p=>[p.id,p]));
   window.addEventListener('hashchange',routeChanged);
   routeChanged();
+  void cloud.init();
   if(!storageAvailable) announce('브라우저 저장 데이터를 불러올 수 없습니다.');
 } catch {
   main.innerHTML='<p class="wrap loading">여행 데이터를 불러오지 못했습니다. README의 로컬 서버 실행 방법을 확인한 뒤 다시 열어 주세요.</p>';
