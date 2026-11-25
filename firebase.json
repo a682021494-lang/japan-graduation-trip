@@ -5,6 +5,10 @@
     "ignore": ["**/.*", "**/node_modules/**", "**/*.zip"],
     "headers": [
       {
+        "regex": "^/($|.*\\.(html|js|css|json)$)",
+        "headers": [{"key": "Cache-Control", "value": "public, no-cache, must-revalidate"}]
+      },
+      {
         "source": "**",
         "headers": [
           { "key": "X-Content-Type-Options", "value": "nosniff" },

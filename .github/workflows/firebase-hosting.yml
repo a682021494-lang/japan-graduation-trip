@@ -42,3 +42,21 @@ jobs:
           unset FIREBASE_SERVICE_ACCOUNT
           GOOGLE_APPLICATION_CREDENTIALS="$credentials" ./node_modules/.bin/firebase deploy \
             --only hosting --project japan-graduation-trip-2027 --non-interactive
+      - name: Verify public entry point and image catalogue
+        shell: bash
+        run: |
+          origin='https://japan-graduation-trip-2027.web.app'
+          for attempt in {1..8}; do
+            if curl --fail --silent --show-error --max-time 15 -D "$RUNNER_TEMP/hosting-headers" "$origin/" -o "$RUNNER_TEMP/hosting-index" &&
+               cmp -s dist/index.html "$RUNNER_TEMP/hosting-index" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/app.js?v=20261125-images" -o "$RUNNER_TEMP/hosting-app" &&
+               cmp -s dist/app.js "$RUNNER_TEMP/hosting-app" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/data/trip-images.js" -o "$RUNNER_TEMP/hosting-images" &&
+               cmp -s dist/data/trip-images.js "$RUNNER_TEMP/hosting-images" &&
+               grep -iq '^cache-control:.*no-cache' "$RUNNER_TEMP/hosting-headers"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::The public website did not serve the deployed entry point and cache policy."
+          exit 1
