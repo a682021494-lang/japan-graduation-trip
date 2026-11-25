@@ -265,7 +265,7 @@ function sourcesPage() {
   <p>${link('일본 정부 연령 안내',sourceLinks.age)} · ${link('일본 외무성 사증 면제 안내',sourceLinks.visa)} · ${link('Visit Japan Web',sourceLinks.visit)} · ${link('일본정부관광국',sourceLinks.japan)}</p>
   <p>여행 순위와 비용 범위는 제공된 명세서의 계획용 편집값입니다. 항공 운항, 운영시간 및 가격은 이용 날짜에 공식 판매처에서 확인하세요. 상세 페이지에서 제공하는 개별 업체 링크 중 일부는 응답 상태가 미검증입니다.</p>
   <h2>지도</h2><p>출처 · 일본 국토지리원 지구지도 일본. Data of Japan이 변환한 자료를 사용해 웹 표시용으로 간략화했습니다. ${link('Data of Japan / land','https://github.com/dataofjapan/land')}</p>
-  <h2>프로젝트 파일</h2><p><a href="japan-graduation-trip-2027.zip" download>소스코드 및 정적 사이트 ZIP 다운로드</a></p><h2>이미지</h2><p>후지산 홈 배너와 오사카, 도쿄, 오타루, 후쿠오카, 오키나와, 후지산 카드의 시각 자료는 OpenAI ImageGen으로 제작한 AI 삽화입니다. 모두 프로젝트에 WebP 파일로 저장했습니다.</p></div>`);
+  ${location.hostname?.endsWith('.chatgpt.site')?'<h2>프로젝트 파일</h2><p><a href="japan-graduation-trip-2027.zip" download>소스코드 및 정적 사이트 ZIP 다운로드</a></p>':''}<h2>이미지</h2><p>후지산 홈 배너와 오사카, 도쿄, 오타루, 후쿠오카, 오키나와, 후지산 카드의 시각 자료는 OpenAI ImageGen으로 제작한 AI 삽화입니다. 모두 프로젝트에 WebP 파일로 저장했습니다.</p></div>`);
 }
 function save() {
   try {localStorage.setItem(key,JSON.stringify(state));storageAvailable=true;}
