@@ -1,3 +1,4 @@
+import { setupGeography } from './geography.js';
 import { tripImages } from './data/trip-images.js';
 import { setupCloudUI } from './cloud-ui.js';
 import { calculate, parseImport, freshState, move, matches, formatMoney, numbers, budgetDefaults } from './logic.js';
@@ -53,6 +54,10 @@ const select = (label, name, items, current) => `<label>${label}<select name="${
 const durationOptions = [['','전체 기간'],['0','2박 3일'],['1','3박 4일']];
 const budgetOptions = [['','모든 예산'],['0-400000','40만 원 이하'],['400000-600000','40~60만 원'],['600000-800000','60~80만 원'],['800000-1000000','80~100만 원'],['1000000-','100만 원 이상'],['custom','직접 입력']];
 const typeOptions = [['','모든 유형'],...types.map(t=>[t,t])];
+const exploreTypes=[...types,'역사','친구들과 여행하기 좋은 곳'];
+const geo=setupGeography({main,esc,select,page,link,getData:()=>data,refresh:()=>{
+  if(location.hash.startsWith('#explore')||location.hash.startsWith('#map')||location.hash.startsWith('#trip/')||location.hash.startsWith('#place/')||location.hash==='#saved')render();
+},detailHref});
 const destinationOptions = () => destinations.map(d=>[d.id,d.name]);
 const photo = (d, cls = '') => {
   const {file, subject, ai} = tripImages[d.id];
@@ -74,14 +79,14 @@ function home() {
 function explore() {
   const prefs = data.prefectures.filter(p=>!filters.region||p.region===filters.region);
   return page('EXPLORE','전국 여행지','8개 권역의 추천 코스와 도시를 둘러보세요.',`<div class="stack">
-    <form class="panel fields" id="filters">
+    ${geo.explorePanel()}<form class="panel fields" id="filters">
     <label>여행지·관광지 검색<input name="q" type="search" value="${esc(filters.q)}" placeholder="예: 도쿄, 온천, 도톤보리"></label>
     ${select('권역','region',[['','전체 권역'],...data.regions.map(r=>[r,r])],filters.region)}
     ${select('도도부현','pref',[['','전체 도도부현'],...prefs.map(p=>[p.id,p.name])],filters.pref)}
     ${select('기간','days',durationOptions,filters.days)}
     ${select('1인당 예산','budget',budgetOptions,filters.budget)}
     <label id="custom-budget" ${filters.budget==='custom'?'':'hidden'}>예산 상한 (원)<input name="custom" type="number" min="0" step="10000" value="${esc(filters.custom)}"></label>
-    ${select('여행 유형','type',typeOptions,filters.type)}
+    <fieldset class="area-type-filters"><legend>여행 유형 · 모두 충족</legend>${exploreTypes.map(type=>`<label><input type="checkbox" name="types" value="${esc(type)}" ${(filters.types||[]).includes(type)?'checked':''}> ${esc(type)}</label>`).join('')}</fieldset>
     ${select('정렬','sort',[['rank','종합 추천순'],['price','예상 비용 낮은 순'],['0','놀거리 많은 순'],['5','겨울 여행 적합순'],['4','사진 명소 추천순'],['6','이동 편의성순']],filters.sort)}
     </form><p class="notice">예산 범위와 겹치는 추천 코스를 표시합니다. 비용이 미산정된 코스와 기본 도시 정보는 예산 필터에서 제외합니다.</p>
     <div id="explore-results">${exploreResults()}</div></div>`);
@@ -90,7 +95,7 @@ function exploreResults() {
   const rows = destinations.filter(d=>matches(d,filters));
   if (filters.sort==='price') rows.sort((a,b)=>(a.price[+filters.days||0]?.[0]??Infinity)-(b.price[+filters.days||0]?.[0]??Infinity));
   else if(filters.sort!=='rank') rows.sort((a,b)=>b.scores[filters.sort]-a.scores[filters.sort]);
-  const cities = (filters.budget||filters.type||filters.days) ? [] : data.cities.filter(d=>matches(d,filters));
+  const cities = (filters.budget||filters.type||filters.types?.length||filters.days) ? [] : data.cities.filter(d=>matches(d,filters));
   return `<div class="stack"><h2>추천 코스 <small>${rows.length}곳</small></h2><div class="${rows.length?'card-grid':'panel empty'}">${rows.length?rows.map(card).join(''):'조건에 맞는 추천 코스가 없습니다.'}</div>
     ${cities.length?`<h2>도시와 지역 <small>${cities.length}곳</small></h2><div class="city-grid city-image-grid">${cities.map(c=>`<a class="city-image-card" href="${detailHref(c.id)}">${photo(c,'city-thumb')}<span><b>${esc(c.name)}</b><small>${esc(c.region)} · ${esc(c.attractions.join(', '))}</small>${tripImages[c.id].ai?'<small class="city-art-label">AI 삽화</small>':''}</span></a>`).join('')}</div>`:''}</div>`;
 }
@@ -103,7 +108,7 @@ function detail(d) {
     <small>${esc(tripImages[d.id].subject)} · ${tripImages[d.id].ai?'AI 삽화':`<span class="links">${link(tripImages[d.id].artist,tripImages[d.id].source)} · ${tripImages[d.id].licenseUrl?link(tripImages[d.id].license,tripImages[d.id].licenseUrl):esc(tripImages[d.id].license)} · WebP 변환</span>`} · 눌러서 확대</small>
     <div class="actions">${btn(state.saved.includes(d.id)?'♥ 찜한 여행지':'♡ 여행지 찜하기','save',`data-id="${d.id}" aria-pressed="${state.saved.includes(d.id)}"`)}
     ${full?compareButton(d)+btn('일정 편집','open-plan',`data-id="${d.id}"`,'primary')+btn('예산 계산','open-budget',`data-id="${d.id}"`):''}
-    <a class="btn" href="#map/${d.pref}">지도에서 보기</a></div>
+    <a class="btn" href="#map/${d.pref}">도도부현 지도</a>${geo.guideLink(d)}</div>
     ${full?`<div class="two"><section class="panel stack"><h2>여행 정보</h2>${tags(d.tags)}
     <p><b>추천 기간 및 1인 비용</b><br>2박 3일 ${priceCell(d,0)} · 3박 4일 ${priceCell(d,1)}</p>
     <p class="links"><b>겨울 기온</b><br>${weather(d)} ${d.weather.length?link('일본 기상청 평년값',sourceLinks.climate):''}</p>
@@ -115,9 +120,29 @@ function detail(d) {
     <section class="panel stack"><h2>관광 명소</h2><div class="attraction-grid">${d.attractions.map((a,i)=>{
       const saved = state.attractions.includes(d.id+':'+i);
       const info = data.attractionInfo[a];
-      return `<article class="attraction stack"><h3>${esc(a)}</h3>${info?.description?`<p>${esc(info.description)}</p>`: ''}<p class="links">${link('구글 지도',mapLink(a,context))}${data.official[a]?' · '+link('공식 안내',data.official[a]):''}</p><small>${info?.practical?esc(info.practical):'운영시간·요금은 방문 전 확인'}</small>${info?.practicalUrl?`<p class="links">${link(info.practicalLabel,info.practicalUrl)}</p>`:''}<button class="text-btn" data-action="attraction" data-id="${d.id}" data-index="${i}" aria-pressed="${saved}">${saved?'♥ 저장됨':'♡ 관광지 저장'}</button></article>`;
+      return `<article class="attraction stack"><h3><a href="#place/${d.id}/${i}">${esc(a)} →</a></h3>${info?.description?`<p>${esc(info.description)}</p>`: ''}<p class="links">${link('구글 지도',mapLink(a,context))}${data.official[a]?' · '+link('공식 안내',data.official[a]):''}</p><small>${info?.practical?esc(info.practical):'운영시간·요금은 방문 전 확인'}</small>${info?.practicalUrl?`<p class="links">${link(info.practicalLabel,info.practicalUrl)}</p>`:''}<button class="text-btn" data-action="attraction" data-id="${d.id}" data-index="${i}" aria-pressed="${saved}">${saved?'♥ 저장됨':'♡ 관광지 저장'}</button></article>`;
     }).join('')}</div></section>
     ${full?`<section class="panel stack"><h2>추천 일정</h2>${tabs('detail-days',selection.detailDays)}<div class="timeline">${d.itineraries[selection.detailDays].map((s,i)=>`<div class="day"><b>${i+1}일차</b><p>${esc(s)}</p></div>`).join('')}</div><small>첫날과 마지막 날은 항공편 시간에 맞춰 조정하세요.</small></section>`:''}</div>`);
+}
+function placePage() {
+  const [,id,index]=location.hash.slice(1).split('/');
+  const d=byId.get(id);
+  const i=Number(index);
+  const data=geo.curated(id,d?.id,i);
+  const title=data?.name||d?.attractions[i];
+  if(!title)return geo.detail(id,d?.id,i,'','');
+  const owner=data?.links?.[0]||[d?.id||'poi',d?i:Number(id)];
+  const saved=state.attractions.includes(owner.join(':'));
+  const picture=data?.image?byId.get(data.image):null;
+  const safeImage=picture?`<div class="card-media">${photo(picture,'detail-cover')}${art(picture)}</div>`:'';
+  const locked=cloud.locked()?' disabled':'';
+  const controls=`<div class="row">${btn(saved?'♥ 저장됨':'♡ 관광지 저장','attraction',`data-id="${esc(owner[0])}" data-index="${owner[1]}" aria-pressed="${saved}"${locked}`)}</div>
+    <form id="add-place-plan" class="fields" data-title="${esc(title)}">
+    ${select('추가할 추천 코스','plan',destinationOptions(),data?.plan||((d?.itineraries&&d.id)||selection.planId))}
+    ${select('기간','length',[[0,'2박 3일'],[1,'3박 4일']],selection.planDays)}
+    ${select('일차','day',[[1,'1일차'],[2,'2일차'],[3,'3일차'],[4,'4일차']],1)}
+    <button type="submit" class="btn primary"${locked}>여행 일정에 추가</button></form>`;
+  return geo.detail(id,d?.id,i,controls,safeImage);
 }
 function tabs(action, active) {
   return `<div class="tabs noprint">${months.map((s,i)=>btn(s,action,`data-index="${i}" aria-pressed="${i===active}"`,i===active?'active':'')).join('')}</div>`;
@@ -130,20 +155,21 @@ function mapPage() {
   const p = prefById.get(selection.mapPref);
   const w = 680/selection.zoom;
   const h = 540/selection.zoom;
+  const locationPoint=geo.coordinate();
   const [x,y] = selection.center;
   const polygons = data.prefectures.map(p=>`<path class="pref ${p.id===selection.mapPref?'active':''}" d="${paths[p.id]}" fill="${regionsColors[data.regions.indexOf(p.region)]}" data-action="map-pref" data-index="${p.id}"><title>${esc(p.name)}</title></path>`).join('');
-  const pins = destinations.map(d=>{
+  const pins = destinations.filter(d=>!p||d.pref===p.id).map(d=>{
     const [cx,cy]=project(d.xy);
     return `<circle class="map-marker" cx="${cx}" cy="${cy}" r="${d.id===selection.mapId?5.5:3.5}" tabindex="0" role="button" aria-label="${esc(d.name)}" data-action="map-pin" data-id="${d.id}"><title>${esc(d.name)}</title></circle>`;
   }).join('');
+  const selectedPin=locationPoint?(()=>{const [cx,cy]=project(locationPoint);return `<circle cx="${cx}" cy="${cy}" r="6" fill="#bd322d" stroke="#fff" stroke-width="2"><title>선택한 위치</title></circle>`;})():'';
   return page('MAP','일본 지도','지도의 도도부현이나 도시를 선택해 위치와 여행 경비를 확인하세요.',`<div class="two">
   <section class="panel stack"><div class="row"><button class="icon" data-action="map-zoom" data-index="1" aria-label="지도 확대">+</button><button class="icon" data-action="map-zoom" data-index="-1" aria-label="지도 축소">−</button>${btn('전체 보기','map-reset')} ${selection.zoom>1?['←','→','↑','↓'].map((a,i)=>`<button class="icon" data-action="map-pan" data-index="${i}" aria-label="지도 ${['왼쪽','오른쪽','위','아래'][i]} 이동">${a}</button>`).join(''):''}</div>
-  <div class="map-shell"><svg viewBox="${x-w/2} ${y-h/2} ${w} ${h}" aria-label="일본 47개 도도부현 지도"><path d="M25 427H196V523H25Z" fill="none" stroke="#8aa5bb" stroke-dasharray="3 3"/><text x="30" y="440" fill="#617d93" font-size="9">오키나와 (삽입도)</text>${polygons}${pins}</svg></div>
+  <div class="map-shell"><svg viewBox="${x-w/2} ${y-h/2} ${w} ${h}" aria-label="일본 47개 도도부현 지도"><path d="M25 427H196V523H25Z" fill="none" stroke="#8aa5bb" stroke-dasharray="3 3"/><text x="30" y="440" fill="#617d93" font-size="9">오키나와 (삽입도)</text>${polygons}${pins}${selectedPin}</svg></div>
   <div class="tags">${data.regions.map((r,i)=>`<span style="background:${regionsColors[i]}">${r}</span>`).join('')}</div>
   <small>출처 · 일본 국토지리원 지구지도 일본, Data of Japan. 오키나와는 삽입도입니다.</small></section>
-  <aside class="stack"><div class="panel stack"><form id="pref-choice">${select('도도부현 선택','pref',[['0','선택하세요'],...data.prefectures.map(p=>[p.id,p.name])],selection.mapPref)}</form>
-  ${p?`<h3>${esc(p.name)}</h3><div class="row">${data.cities.filter(c=>c.pref===p.id).map(c=>`<a class="btn" href="${detailHref(c.id)}">${esc(c.name)}</a>`).join('')}</div>`:''}
-  <form id="marker-choice">${select('추천 도시 선택','city',[['','선택하세요'],...destinationOptions()],selection.mapId)}</form>
+  <aside class="stack">${geo.mapPanel()}<div class="panel stack">
+  <form id="marker-choice">${select('추천 도시 선택','city',[['','선택하세요'],...destinations.filter(g=>!p||g.pref===p.id).map(g=>[g.id,g.name])],selection.mapId)}</form>
   ${d?`<a class="card-media" href="${detailHref(d.id)}">${photo(d)}${art(d)}</a><h2>${esc(d.name)}</h2><p>${months.map((m,i)=>`${m} ${priceCell(d,i)}`).join(' · ')}</p><p><b>일본 도착 공항</b> ${esc(d.airport)}</p><a class="btn primary" href="${detailHref(d.id)}">상세 보기 →</a>`:''}</div>
   <div class="panel links"><h3>한국 출발 공항</h3><p>${link('청주 CJJ',sourceLinks.cjj)} · ${link('인천 ICN',sourceLinks.icn)}</p><small>도착 공항은 접근 기준입니다. 직항 및 2027년 운항 여부는 항공사에서 날짜별로 확인하세요.</small></div></aside></div>`);
 }
@@ -251,6 +277,9 @@ function winterPage() {
 }
 function savedPage() {
   const chosen = state.saved.map(id=>byId.get(id)).filter(Boolean);
+  const ownPlaces=state.attractions.filter(key=>key.startsWith('poi:')).map(key=>key.split(':')[1]);
+  if(ownPlaces.length)geo.loadPlaces();
+  const extra=ownPlaces.map(id=>[id,geo.curated(id)]).filter(([,p])=>p);
   const places=state.attractions.map(k=>{const [id,i]=k.split(':');return [byId.get(id),Number(i)];}).filter(([d,i])=>d?.attractions[i]);
   const storedPlans=Object.keys(state.plans).flatMap(k=>{
     const m=k.match(/^(.+)-([01])$/);
@@ -259,7 +288,7 @@ function savedPage() {
   return page('SHORTLIST','나의 여행 후보','찜, 메모, 예산과 일정은 '+cloud.storageText()+' 텍스트나 JSON 파일로 친구에게 공유할 수 있습니다.',`<div class="stack"><div class="panel stack">
   <div class="actions">${btn('후보·투표 문구 복사','copy-saved','','primary')}${btn('JSON 내보내기','export')}${btn('JSON 불러오기','import')}<input id="file-import" type="file" accept=".json,application/json" hidden><a class="btn" href="#compare">비교 보기 →</a></div><small>투표 문구는 친구들이 각자 번호를 답장할 수 있도록 생성합니다.</small></div>
   ${chosen.length?`<div class="attraction-grid">${chosen.map(d=>`<article class="attraction stack"><h2><a href="${detailHref(d.id)}">${esc(d.name)} →</a></h2><label>개인 메모<textarea data-note="${d.id}" rows="3" maxlength="2000">${esc(state.notes[d.id]||'')}</textarea></label><div class="row">${d.itineraries?compareButton(d):''}${btn('찜 해제','save',`data-id="${d.id}"`)}</div></article>`).join('')}</div>`:'<p class="panel empty">여행지의 하트 버튼을 눌러 후보를 추가하세요.</p>'}
-  <section class="panel stack"><h2>저장한 관광지</h2>${places.length?places.map(([d,i])=>`<div class="row links">${link(d.attractions[i],mapLink(d.attractions[i],prefById.get(d.pref).name))}<small>${esc(d.name)}</small>${btn('삭제','attraction',`data-id="${d.id}" data-index="${i}"`)}</div>`).join(''):'<p class="muted">저장한 관광지가 없습니다.</p>'}</section>
+  <section class="panel stack"><h2>저장한 관광지</h2>${extra.map(([id,p])=>`<div class="row links"><a href="#place/${esc(id)}">${esc(p.name)}</a>${btn('삭제','attraction',`data-id="poi" data-index="${esc(id)}"`)}</div>`).join('')}${places.length?places.map(([d,i])=>`<div class="row links">${link(d.attractions[i],mapLink(d.attractions[i],prefById.get(d.pref).name))}<small>${esc(d.name)}</small>${btn('삭제','attraction',`data-id="${d.id}" data-index="${i}"`)}</div>`).join(''):ownPlaces.length?'':'<p class="muted">저장한 관광지가 없습니다.</p>'}</section>
   <section class="panel stack"><h2>저장한 일정과 예산</h2>
   ${storedPlans.map(([d,i])=>btn(esc(d.name)+' · '+months[i],'open-plan',`data-id="${d.id}" data-index="${i}"`)).join(' ')}
   <p>저장된 예산 · 1인 ₩${formatMoney(calculate(state.budget).perPerson)} <a class="text-btn" href="#budget">편집 →</a></p></section></div>`);
@@ -288,7 +317,7 @@ function render() {
   if (!data) return;
   const [route='',arg]=location.hash.slice(1).split('/');
   const active=route||'home';
-  const views={home,explore,map:mapPage,trip:()=>detail(byId.get(arg)),compare:comparePage,plan:planPage,budget:budgetPage,prep:prepPage,winter:winterPage,saved:savedPage,sources:sourcesPage};
+  const views={home,explore,map:mapPage,trip:()=>detail(byId.get(arg)),place:placePage,compare:comparePage,plan:planPage,budget:budgetPage,prep:prepPage,winter:winterPage,saved:savedPage,sources:sourcesPage};
   main.innerHTML=cloud.hasRoute(active)?cloud.cloudPage(active,arg||''):(Object.hasOwn(views,active)?views[active]:home)();
   if(cloud.locked()&&!cloud.hasRoute(active)) {
     for(const element of main.querySelectorAll('[data-action="save"],[data-action="attraction"],[data-action="compare"],[data-action="reset-plan"],[data-action="move-day"],[data-action="move-stop"],[data-action="import"],[data-note],[data-memo],[data-check],[data-add-stop] input,[data-add-stop] button,#compare-choice button,#budget-form button')){
@@ -296,7 +325,7 @@ function render() {
     }
   }
   for(const a of document.querySelectorAll('nav a,.saved-link')){
-    const current=a.hash==='#'+(active==='trip'?'explore':active);
+    const current=a.hash==='#'+(['trip','place'].includes(active)?'explore':active);
     a.classList.toggle('active',current);
     if(current) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
   }
@@ -309,7 +338,7 @@ function routeChanged() {
   const [route,arg]=location.hash.slice(1).split('/');
   cloud.routeChanged(route,arg);
   if(route==='trip') selection.detailDays=0;
-  if(route==='map'&&prefById.has(Number(arg))) setMapPref(Number(arg));
+  if(route==='map'){setMapPref(prefById.has(Number(arg))?Number(arg):0);selection.mapId=selection.pendingMapId||'';selection.pendingMapId='';}
   navigation.classList.remove('open');menu.setAttribute('aria-expanded','false');
   render();
   window.scrollTo(0,0);
@@ -329,7 +358,7 @@ function toggleCompare(id) {
 }
 function setMapPref(pref) {
   selection.mapPref=pref;
-  selection.mapId=(destinations.find(d=>d.pref===pref)||destinations.find(d=>d.relatedPrefs.includes(pref)))?.id||'';
+  selection.mapId=''; selection.zoom=1;selection.center=[340,270];
 }
 async function copy(text) {
   try {await navigator.clipboard.writeText(text);announce('텍스트를 복사했습니다.');}
@@ -372,18 +401,18 @@ main.addEventListener('click',event=>{
   const i=Number(el.dataset.index), j=Number(el.dataset.day);
   switch(action){
     case 'save': if(byId.has(id)){toggleList(state.saved,id);save();render();} break;
-    case 'attraction': if(byId.get(id)?.attractions[i]){toggleList(state.attractions,id+':'+i);save();render();} break;
+    case 'attraction': if(byId.get(id)?.attractions[i] || id==='poi'&&geo.curated(String(i))){toggleList(state.attractions,id+':'+i);save();render();} break;
     case 'compare': toggleCompare(id);break;
     case 'open-plan': if(byId.get(id)?.itineraries){selection.planId=id;selection.planDays=Number.isInteger(i)?i:selection.detailDays;go('plan');} break;
     case 'open-budget': state.budget.id=id;state.budget.days=selection.detailDays+3;save();go('budget');break;
     case 'detail-days': selection.detailDays=i;render();break;
     case 'plan-days': selection.planDays=i;render();break;
     case 'zoom-photo': dialogBody.innerHTML=photo(byId.get(id))+(tripImages[id].ai?'<p class="muted">AI 삽화</p>':'');dialog.showModal();break;
-    case 'map-pin': selection.mapId=id;selection.mapPref=byId.get(id).pref;render();break;
-    case 'map-pref': setMapPref(i);render();break;
+    case 'map-pin': {const pref=byId.get(id).pref;if(pref!==selection.mapPref){selection.pendingMapId=id;go('map/'+pref);}else{selection.mapId=id;render();}break;}
+    case 'map-pref': go('map/'+i);break;
     case 'map-reset': selection.zoom=1;selection.center=[340,270];render();break;
     case 'map-zoom': {
-      if(i>0 && selection.zoom===1 && selection.mapPref && selection.mapId) selection.center=project(byId.get(selection.mapId).xy);
+      if(i>0&&selection.zoom===1){const point=geo.coordinate()||byId.get(selection.mapId)?.xy;if(point)selection.center=project(point);}
       selection.zoom=Math.max(1,Math.min(4,selection.zoom*(i>0?1.35:1/1.35)));
       if(selection.zoom===1) selection.center=[340,270];
       render();break;
@@ -431,6 +460,20 @@ main.addEventListener('submit',e=>{
   e.preventDefault();
   if(cloud.locked()&&(['compare-choice','budget-form'].includes(form.id)||form.hasAttribute('data-add-stop')))return;
   const values=Object.fromEntries(new FormData(form));
+  if(form.id==='add-place-plan'){
+    if(cloud.locked())return;
+    const {title}=form.dataset;
+    const trip=byId.get(values.plan);
+    if(!trip?.itineraries||!title)return;
+    selection.planId=trip.id;
+    selection.planDays=Number(values.length)===1?1:0;
+    const days=planFor();
+    const day=days[Number(values.day)-1];
+    if(!day){announce('선택한 여행 기간의 일차를 확인하세요.');return;}
+    if(day.stops.includes(title)){announce('이미 같은 일정에 담겨 있습니다.');return;}
+    if(day.stops.length>=30){announce('하루에 최대 30곳을 추가할 수 있습니다.');return;}
+    day.stops.push(title);setPlan(days);go('plan');announce('관광지를 일정에 추가했습니다.');return;
+  }
   if(form.id==='quick'){filters={q:'',region:'',pref:'',custom:'',sort:'rank',...values};go('explore');}
   if(form.id==='compare-choice') toggleCompare(values.city);
   if(form.id==='budget-form'){
@@ -445,6 +488,7 @@ main.addEventListener('submit',e=>{
   }
 });
 main.addEventListener('input',e=>{
+  geo.input(e);
   const el=e.target,form=el.form;
   if(form?.id==='filters'&&['q','custom'].includes(el.name)){
     filters[el.name]=el.value;
@@ -455,7 +499,12 @@ main.addEventListener('input',e=>{
   if(!cloud.locked()&&el.hasAttribute('data-note')){state.notes[el.dataset.note]=el.value;save();}
 });
 main.addEventListener('change',async e=>{
+  if(geo.change(e))return;
   const el=e.target,form=el.form;
+  if(form?.id==='filters'&&el.name==='types'){
+    filters.type='';filters.types=[...form.querySelectorAll('input[name="types"]:checked')].map(input=>input.value);
+    main.querySelector('#explore-results').innerHTML=exploreResults();
+  }
   if(form?.id==='filters'&&el.tagName==='SELECT'){
     const name=el.name;
     filters[name]=el.value;
@@ -464,8 +513,7 @@ main.addEventListener('change',async e=>{
     main.querySelector(`#filters select[name="${name}"]`).focus();
   }
   if(form?.id==='plan-choice'){selection.planId=el.value;render();}
-  if(form?.id==='pref-choice'){setMapPref(Number(el.value));render();}
-  if(form?.id==='marker-choice'){selection.mapId=el.value;selection.mapPref=byId.get(el.value)?.pref||0;render();}
+  if(form?.id==='marker-choice'){const pref=byId.get(el.value)?.pref;if(pref&&pref!==selection.mapPref){selection.pendingMapId=el.value;go('map/'+pref);}else{selection.mapId=el.value;render();}}
   if(!cloud.locked()&&el.hasAttribute('data-check')){
     toggleList(state.checks,el.dataset.check);save();
     main.querySelector('#check-progress').textContent=checkProgress();

@@ -91,3 +91,22 @@ test('84개 여행지는 로컬 WebP와 이미지 출처 정보를 제공한다'
     assert.equal(bytes.subarray(8,12).toString(),'WEBP',id);
   }
 });
+
+test('47개 행정구역 파일의 상·하위 코드와 관광지 참조가 유효하다',async()=>{
+  const keys=Object.keys(JSON.parse(await read('data/areas/prefectures.json')));
+  assert.equal(keys.length,47);
+  const groups=await Promise.all(keys.map(async key=>JSON.parse(await read('data/areas/'+key+'.json'))));
+  const index=new Map(groups.flat().map(row=>[row[0],row]));
+  assert.equal(index.size,2283);
+  for(const [code,row] of index){
+    if(row[5])assert.equal(index.get(row[5])?.[0].slice(0,2),code.slice(0,2));
+  }
+  const places=JSON.parse(await read('data/areas/places.json'));
+  const guides=JSON.parse(await read('data/areas/guides.json'));
+  assert.deepEqual(Object.keys(guides).sort(),[...ids].sort());
+  for(const code of Object.values(guides))assert(index.has(code),code);
+  for(const place of Object.values(places)){
+    assert(index.has(place.area),place.name);
+    assert.match(place.source,/^https:\/\//);
+  }
+});

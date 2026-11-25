@@ -1,0 +1,269 @@
+{
+  "1": {
+    "area": "13113",
+    "name": "메이지 신궁",
+    "ja": "明治神宮",
+    "local": "하라주쿠",
+    "xy": [
+      139.699,
+      35.676
+    ],
+    "address": "東京都渋谷区代々木神園町1-1",
+    "source": "https://www.meijijingu.or.jp/en/visit/",
+    "description": "도쿄 시부야의 숲길을 따라 본전까지 걸을 수 있는 신궁입니다.",
+    "fee": "경내 무료 · 일부 시설 유료",
+    "hours": "연중 개방 · 1월 06:40~16:20, 2월 06:20~16:50 (경내)",
+    "access": "JR 하라주쿠역·도쿄메트로 메이지진구마에역에서 진입",
+    "duration": "약 1시간 (공식 안내)",
+    "nearby": "하라주쿠 다케시타 거리",
+    "winter": "해가 일찍 지므로 겨울 폐문 시간을 확인하세요.",
+    "plan": "tokyo",
+    "links": [],
+    "checked": "2026-11-25"
+  },
+  "2": {
+    "area": "10426",
+    "name": "구사쓰 온천 유바타케",
+    "ja": "草津温泉 湯畑",
+    "local": "구사쓰 온천",
+    "xy": [
+      138.596,
+      36.623
+    ],
+    "address": "群馬県吾妻郡草津町 草津温泉 湯畑",
+    "source": "https://www.visit-gunma.jp/en/spots/kusatsu-onsen/",
+    "description": "온천수가 흐르는 유바타케를 중심으로 온천 거리와 공중목욕탕이 모여 있습니다.",
+    "access": "구사쓰 온천 버스터미널에서 도보 약 6분 (군마 관광 안내)",
+    "nearby": "네쓰노유·고잔노유",
+    "winter": "결빙에 주의하고 버스 지연 가능성을 확인하세요.",
+    "plan": "tokyo",
+    "image": "city-22",
+    "links": [
+      [
+        "city-22",
+        0
+      ]
+    ],
+    "checked": "2026-11-25"
+  },
+  "3": {
+    "area": "01203",
+    "name": "오타루 운하",
+    "ja": "小樽運河",
+    "local": "오타루 운하 주변",
+    "xy": [
+      141.003,
+      43.199
+    ],
+    "address": "北海道小樽市港町",
+    "source": "https://www.visit-hokkaido.jp/en/spot/detail_10040.html",
+    "description": "항만의 화물을 창고로 옮기기 위해 조성된 운하와 옛 창고를 따라 산책할 수 있습니다.",
+    "access": "JR 오타루역 방면에서 도보 이동",
+    "nearby": "오타루 운하 크루즈·사카이마치 거리",
+    "winter": "적설 시 운하 산책로 결빙에 주의하세요.",
+    "plan": "sapporo",
+    "image": "city-2",
+    "links": [
+      [
+        "sapporo",
+        3
+      ],
+      [
+        "city-2",
+        0
+      ]
+    ],
+    "checked": "2026-11-25"
+  },
+  "4": {
+    "area": "06212",
+    "name": "긴잔온천",
+    "ja": "銀山温泉",
+    "local": "긴잔온천 거리",
+    "xy": [
+      140.531,
+      38.57
+    ],
+    "address": "山形県尾花沢市銀山新畑",
+    "source": "https://www.japan.travel/en/japans-local-treasures/ginzan-onsen/",
+    "description": "산간 계곡을 따라 전통 료칸이 모여 있는 온천 마을입니다.",
+    "nearby": "오바나자와 소바·온천 거리",
+    "winter": "겨울 교통 통제와 셔틀 예약 안내를 확인하세요.",
+    "plan": "sendai",
+    "image": "city-9",
+    "links": [
+      [
+        "sendai",
+        0
+      ]
+    ],
+    "checked": "2026-11-25"
+  },
+  "5": {
+    "area": "21604",
+    "name": "시라카와고 합장촌",
+    "ja": "白川郷 荻町合掌造り集落",
+    "local": "오기마치",
+    "xy": [
+      136.906,
+      36.258
+    ],
+    "address": "岐阜県大野郡白川村荻町",
+    "source": "https://www.japan.travel/en/spot/2038/",
+    "description": "가파른 초가지붕의 갓쇼즈쿠리 가옥이 남아 있는 산간 마을입니다.",
+    "nearby": "야외 박물관·오기마치 전망대",
+    "winter": "폭설 시 버스와 전망대 운영 여부를 확인하세요.",
+    "plan": "kanazawa",
+    "image": "city-27",
+    "links": [
+      [
+        "kanazawa",
+        0
+      ],
+      [
+        "city-27",
+        0
+      ]
+    ],
+    "checked": "2026-11-25"
+  },
+  "6": {
+    "area": "26105",
+    "name": "기요미즈데라",
+    "ja": "清水寺",
+    "local": "기요미즈·산넨자카",
+    "xy": [
+      135.785,
+      34.995
+    ],
+    "address": "京都府京都市東山区清水1丁目294",
+    "source": "https://www.kiyomizudera.or.jp/en/location/",
+    "description": "히가시야마 언덕에 자리한 사찰로 본당에서 교토 시내를 내려다볼 수 있습니다.",
+    "hours": "06:00 개문 · 폐문 시각은 계절별 확인",
+    "nearby": "산넨자카·니넨자카",
+    "winter": "돌계단 결빙과 특별 야간 개방 일정을 확인하세요.",
+    "plan": "osaka",
+    "image": "city-37",
+    "links": [
+      [
+        "osaka",
+        9
+      ],
+      [
+        "city-37",
+        0
+      ]
+    ],
+    "checked": "2026-11-25"
+  },
+  "7": {
+    "area": "34213",
+    "name": "이쓰쿠시마 신사",
+    "ja": "嚴島神社",
+    "local": "미야지마",
+    "xy": [
+      132.319,
+      34.296
+    ],
+    "address": "広島県廿日市市宮島町1-1",
+    "source": "https://www.itsukushimajinja.jp/en/",
+    "description": "조수에 따라 대형 도리이와 해상 신사의 풍경이 바뀝니다.",
+    "access": "미야지마구치에서 페리 이용",
+    "nearby": "미야지마 오모테산도",
+    "winter": "바닷바람에 대비하고 조석표와 페리 운항을 확인하세요.",
+    "plan": "hiroshima",
+    "image": "city-45",
+    "links": [
+      [
+        "hiroshima",
+        0
+      ],
+      [
+        "city-45",
+        0
+      ]
+    ],
+    "checked": "2026-11-25"
+  },
+  "8": {
+    "area": "37201",
+    "name": "리쓰린공원",
+    "ja": "栗林公園",
+    "local": "리쓰린초",
+    "xy": [
+      134.043,
+      34.329
+    ],
+    "address": "香川県高松市栗林町1-20-16",
+    "source": "https://www.my-kagawa.jp/en/see-and-do/10077",
+    "description": "소나무와 연못 주변을 도는 다이묘 정원입니다.",
+    "access": "리쓰린코엔마에 버스 정류장 인근",
+    "nearby": "사누키 우동·공원 동문 공예 시설",
+    "winter": "동절기 개장 시간을 확인하고 아침 산책에는 방한 준비를 하세요.",
+    "plan": "takamatsu",
+    "image": "city-51",
+    "links": [
+      [
+        "takamatsu",
+        0
+      ],
+      [
+        "city-51",
+        0
+      ]
+    ],
+    "checked": "2026-11-25"
+  },
+  "9": {
+    "area": "43101",
+    "name": "구마모토성",
+    "ja": "熊本城",
+    "local": "혼마루",
+    "xy": [
+      130.706,
+      32.806
+    ],
+    "address": "熊本県熊本市中央区本丸1-1",
+    "source": "https://www.japan.travel/en/spot/638/",
+    "description": "구마모토 도심의 성곽으로 2016년 지진 이후 복구가 이어지고 있습니다.",
+    "nearby": "사쿠라노바바 조사이엔",
+    "winter": "복구에 따른 출입 가능 구역과 관람 동선을 확인하세요.",
+    "plan": "kumamoto",
+    "image": "city-61",
+    "links": [
+      [
+        "kumamoto",
+        0
+      ],
+      [
+        "city-61",
+        0
+      ]
+    ],
+    "checked": "2026-11-25"
+  },
+  "10": {
+    "area": "03402",
+    "name": "주손지",
+    "ja": "中尊寺",
+    "local": "히라이즈미",
+    "xy": [
+      141.101,
+      39.002
+    ],
+    "address": "岩手県西磐井郡平泉町平泉",
+    "source": "https://faq.japan-travel.jnto.go.jp/en/spot/1803/",
+    "description": "오슈 후지와라 가문과 관련된 사찰로 금색당이 유명합니다.",
+    "access": "JR 히라이즈미역에서 버스 약 10분 또는 도보 약 30분 (JNTO)",
+    "winter": "산책로의 눈과 결빙에 대비하세요.",
+    "plan": "sendai",
+    "image": "city-13",
+    "links": [
+      [
+        "city-13",
+        0
+      ]
+    ],
+    "checked": "2026-11-25"
+  }
+}

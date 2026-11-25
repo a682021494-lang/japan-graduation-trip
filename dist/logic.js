@@ -53,6 +53,10 @@ export function matches(d,f) {
   const query = f.q.trim().toLowerCase();
   if (query && ![d.name,d.region,d.description,...(d.tags||[]),...d.attractions].join(' ').toLowerCase().includes(query)) return false;
   if (f.region && d.region!==f.region || f.pref && !(d.relatedPrefs||[d.pref]).map(String).includes(f.pref) || f.type && !d.tags?.includes(f.type)) return false;
+  const allTypes=[...new Set([...(d.tags||[]),...(d.scores?.[7]>=4?['친구들과 여행하기 좋은 곳']:[])])];
+  if (/성$|사찰|도쇼구|기념공원/.test(d.attractions.join(' '))||d.attractions.some(name=>name.endsWith('성'))) allTypes.push('역사');
+  if (allTypes.includes('액티비티')) allTypes.push('체험');
+  if (f.types?.some(type=>!allTypes.includes(type))) return false;
   if (f.budget) {
     const [min,max] = f.budget==='custom' ? [0, f.custom===''?Infinity:Number(f.custom)] : f.budget.split('-').map((v,i)=>v===''?(i?Infinity:0):Number(v));
     const ranges = f.days==='' ? d.price : [d.price?.[Number(f.days)]];

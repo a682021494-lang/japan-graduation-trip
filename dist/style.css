@@ -46,3 +46,10 @@ input[type=time]{font:inherit}
 .city-image-grid .city-image-card{display:grid;grid-template-columns:66px minmax(0,1fr);align-items:center;gap:8px}
 .city-image-card .city-thumb{width:66px;height:54px;object-fit:cover;border-radius:4px}
 .city-image-card .city-art-label{font-size:10px}
+.area-type-filters{grid-column:1/-1;min-width:0;border:0;padding:5px 0;margin:0;display:flex;gap:7px 16px;flex-wrap:wrap}
+.area-type-filters legend{font-size:13px;font-weight:700}
+.area-type-filters label{white-space:nowrap}
+.area-results ul{max-height:220px;overflow:auto;margin:0;padding-inline-start:20px}
+.area-results a:hover,.attraction h3 a:hover{text-decoration:underline}
+.area-facts{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 16px;margin:0}
+.area-facts dt{font-weight:700}.area-facts dd{margin:0;overflow-wrap:anywhere}
