@@ -1,0 +1,44 @@
+name: Deploy Firebase Hosting
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-hosting-live
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci && npm run build
+      - name: Deploy to Firebase Hosting
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JAPAN_GRADUATION_TRIP_2027 }}
+        shell: bash
+        run: |
+          if [[ -z "$FIREBASE_SERVICE_ACCOUNT" ]]; then
+            echo "::error::The Firebase deployment secret is missing."
+            exit 1
+          fi
+          umask 077
+          credentials="$(mktemp "$RUNNER_TEMP/firebase-credentials.XXXXXX.json")"
+          trap 'rm -f -- "$credentials"' EXIT
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$credentials"
+          unset FIREBASE_SERVICE_ACCOUNT
+          GOOGLE_APPLICATION_CREDENTIALS="$credentials" ./node_modules/.bin/firebase deploy \
+            --only hosting --project japan-graduation-trip-2027 --non-interactive
