@@ -74,3 +74,20 @@ test('정적 진입점 및 로컬 그림·폰트 파일 확인', async () => {
   for(const p of await readdir(new URL('fonts/',dist))) assert((await readFile(new URL('fonts/'+p,dist))).length>0);
   assert.match(app,/localStorage\.setItem/);
 });
+
+test('84개 여행지는 로컬 WebP와 이미지 출처 정보를 제공한다',async()=>{
+  const {tripImages}=await import('../dist/data/trip-images.js');
+  assert.deepEqual(Object.keys(tripImages).sort(),[...ids].sort());
+  for(const [id,image] of Object.entries(tripImages)){
+    assert.match(image.file,/^(trips\/)?[a-z0-9-]+\.webp$/,id);
+    assert(image.subject,id);
+    assert.equal(typeof image.ai,'boolean');
+    if(!image.ai){
+      assert(image.artist&&image.license,id);
+      assert.equal(new URL(image.source).hostname,'commons.wikimedia.org',id);
+    }
+    const bytes=await readFile(new URL('images/'+image.file,dist));
+    assert.equal(bytes.subarray(0,4).toString(),'RIFF',id);
+    assert.equal(bytes.subarray(8,12).toString(),'WEBP',id);
+  }
+});

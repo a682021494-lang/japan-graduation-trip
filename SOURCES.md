@@ -38,3 +38,9 @@
 ## 글꼴
 
 Noto Sans KR을 일부 문자로 축소해 로컬에 포함했습니다. [Google Fonts 원본](https://github.com/google/fonts/tree/main/ofl/notosanskr) 및 `dist/fonts/OFL.txt`의 SIL Open Font License를 참고하세요.
+
+## 여행지 대표 이미지
+
+추천 여행지 18곳과 세부 도시·지역 66곳의 대표 이미지 목록은 `dist/data/trip-images.js`에 있습니다. 총 84개 항목 중 81개는 Wikimedia Commons의 라이선스가 확인된 실제 관광 사진을 사용합니다. 사진은 크기를 조정해 WebP로 변환했습니다. 각 상세 페이지에서 원본 사진, 저작자, 라이선스를 확인할 수 있습니다. 변환 사진에는 해당 원본의 라이선스가 적용됩니다.
+
+기타큐슈 추천 코스, 기타큐슈 세부 항목, 나오시마 세부 항목에는 각각 모지코 레트로와 지추미술관을 소재로 한 OpenAI ImageGen 삽화를 사용합니다. 사이트에 AI 삽화로 표시합니다.

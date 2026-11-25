@@ -1,3 +1,4 @@
+import { tripImages } from './data/trip-images.js';
 import { setupCloudUI } from './cloud-ui.js';
 import { calculate, parseImport, freshState, move, matches, formatMoney, numbers, budgetDefaults } from './logic.js';
 
@@ -20,7 +21,6 @@ let state = guestState();
 const types = ['놀이공원','액티비티','애니메이션·게임','쇼핑','맛집','겨울 설경','온천','자연','바다','일본 전통문화','야경','가성비','소도시 여행'];
 const labels = ['놀거리','먹거리','쇼핑','가성비','사진 명소','겨울 여행','대중교통','친구 여행'];
 const months = ['2박 3일','3박 4일'];
-const assets = new Set(['osaka','tokyo','sapporo','fukuoka','okinawa','fuji']);
 const regionsColors = ['#96adc9','#9ebac9','#bac5a2','#b4c4dc','#e4b29f','#d6c293','#b4bbcf','#dfc39e'];
 const sourceLinks = {
   climate:'https://www.data.jma.go.jp/stats/data/en/normal/normal.html',
@@ -54,10 +54,11 @@ const durationOptions = [['','전체 기간'],['0','2박 3일'],['1','3박 4일'
 const budgetOptions = [['','모든 예산'],['0-400000','40만 원 이하'],['400000-600000','40~60만 원'],['600000-800000','60~80만 원'],['800000-1000000','80~100만 원'],['1000000-','100만 원 이상'],['custom','직접 입력']];
 const typeOptions = [['','모든 유형'],...types.map(t=>[t,t])];
 const destinationOptions = () => destinations.map(d=>[d.id,d.name]);
-const photo = (d, cls = '') => assets.has(d.id)
-  ? `<img class="${cls}" src="images/${d.id}.webp" alt="${esc(d.name)}의 AI 생성 여행 삽화" loading="lazy" width="500" height="330" data-fallback>`
-  : `<div class="card-visual ${cls}" aria-label="${esc(d.region)}">${esc(d.region)}</div>`;
-const art = d => assets.has(d.id) ? '<span class="art-label">AI 삽화</span>' : '';
+const photo = (d, cls = '') => {
+  const {file, subject, ai} = tripImages[d.id];
+  return `<img class="${cls}" src="images/${esc(file)}" alt="${esc(subject)} ${ai?'AI 삽화':'사진'}" loading="lazy" decoding="async" width="500" height="330" data-fallback>`;
+};
+const art = d => tripImages[d.id].ai ? '<span class="art-label">AI 삽화</span>' : '';
 const savedButton = d => `<button type="button" class="icon heart ${state.saved.includes(d.id)?'on':''}" data-action="save" data-id="${d.id}" aria-pressed="${state.saved.includes(d.id)}" aria-label="${esc(d.name)} 찜하기">${state.saved.includes(d.id)?'♥':'♡'}</button>`;
 const compareButton = d => btn(state.compare.includes(d.id)?'비교에서 제거':'＋ 비교 담기','compare',`data-id="${d.id}" aria-pressed="${state.compare.includes(d.id)}"`);
 function card(d) {
@@ -91,14 +92,15 @@ function exploreResults() {
   else if(filters.sort!=='rank') rows.sort((a,b)=>b.scores[filters.sort]-a.scores[filters.sort]);
   const cities = (filters.budget||filters.type||filters.days) ? [] : data.cities.filter(d=>matches(d,filters));
   return `<div class="stack"><h2>추천 코스 <small>${rows.length}곳</small></h2><div class="${rows.length?'card-grid':'panel empty'}">${rows.length?rows.map(card).join(''):'조건에 맞는 추천 코스가 없습니다.'}</div>
-    ${cities.length?`<h2>도시와 지역 <small>${cities.length}곳</small></h2><div class="city-grid">${cities.map(c=>`<a href="${detailHref(c.id)}"><b>${esc(c.name)}</b><small>${esc(c.region)} · ${esc(c.attractions.join(', '))}</small></a>`).join('')}</div>`:''}</div>`;
+    ${cities.length?`<h2>도시와 지역 <small>${cities.length}곳</small></h2><div class="city-grid city-image-grid">${cities.map(c=>`<a class="city-image-card" href="${detailHref(c.id)}">${photo(c,'city-thumb')}<span><b>${esc(c.name)}</b><small>${esc(c.region)} · ${esc(c.attractions.join(', '))}</small>${tripImages[c.id].ai?'<small class="city-art-label">AI 삽화</small>':''}</span></a>`).join('')}</div>`:''}</div>`;
 }
 function detail(d) {
   if (!d) return page('DESTINATION','여행지를 찾을 수 없습니다','다른 여행지를 찾아보세요.','<a class="btn" href="#explore">전국 여행지</a>');
   const full = Boolean(d.itineraries);
   const context = prefById.get(d.pref).name;
   return page(esc(d.region),esc(d.name),esc(d.description||`${context}에서 둘러볼 여행지`),`<div class="stack">
-    ${assets.has(d.id)?`<button class="cover-button" type="button" data-action="zoom-photo" data-id="${d.id}" aria-label="삽화 확대">${photo(d,'detail-cover')}</button><small>AI 생성 삽화 · 눌러서 확대</small>`:''}
+    <button class="cover-button" type="button" data-action="zoom-photo" data-id="${d.id}" aria-label="대표 이미지 확대">${photo(d,'detail-cover')}</button>
+    <small>${esc(tripImages[d.id].subject)} · ${tripImages[d.id].ai?'AI 삽화':`<span class="links">${link(tripImages[d.id].artist,tripImages[d.id].source)} · ${tripImages[d.id].licenseUrl?link(tripImages[d.id].license,tripImages[d.id].licenseUrl):esc(tripImages[d.id].license)} · WebP 변환</span>`} · 눌러서 확대</small>
     <div class="actions">${btn(state.saved.includes(d.id)?'♥ 찜한 여행지':'♡ 여행지 찜하기','save',`data-id="${d.id}" aria-pressed="${state.saved.includes(d.id)}"`)}
     ${full?compareButton(d)+btn('일정 편집','open-plan',`data-id="${d.id}"`,'primary')+btn('예산 계산','open-budget',`data-id="${d.id}"`):''}
     <a class="btn" href="#map/${d.pref}">지도에서 보기</a></div>
@@ -191,7 +193,7 @@ function planPage() {
     <form data-add-stop="${i}" class="noprint"><input name="stop" maxlength="160" required aria-label="${i+1}일차 장소 추가" placeholder="관광지나 식당 추가" list="plan-places"><button class="btn">추가</button></form>
     <label>메모<textarea rows="2" maxlength="2000" data-memo="${i}">${esc(day.memo)}</textarea></label>
     </article>`).join('')}</div></div>
-    <aside class="panel stack"><h2>일정 공유</h2>${assets.has(d.id)?`<div class="card-media">${photo(d)}${art(d)}</div>`:''}
+    <aside class="panel stack"><h2>일정 공유</h2><div class="card-media">${photo(d)}${art(d)}</div>
     <p><b>숙소 기준</b><br>${esc(d.stay)}</p><p><b>현지 이동</b><br>${esc(d.transport)}</p><p><b>음식 후보</b><br>${esc(d.food)}</p>
     <p class="links">${link('공항부터 숙소까지 경로 보기','https://www.google.com/maps/dir/?api=1&origin='+encoded(d.airport)+'&destination='+encoded(d.stay+' '+d.name)+'&travelmode=transit')}</p>
     <div class="actions noprint">${btn('일정 복사','copy-plan','','primary')}${btn('인쇄','print')}${btn('추천 일정으로 초기화','reset-plan')}</div></aside></section>
@@ -268,7 +270,7 @@ function sourcesPage() {
   <p>${link('일본 정부 연령 안내',sourceLinks.age)} · ${link('일본 외무성 사증 면제 안내',sourceLinks.visa)} · ${link('Visit Japan Web',sourceLinks.visit)} · ${link('일본정부관광국',sourceLinks.japan)}</p>
   <p>여행 순위와 비용 범위는 제공된 명세서의 계획용 편집값입니다. 항공 운항, 운영시간 및 가격은 이용 날짜에 공식 판매처에서 확인하세요. 상세 페이지에서 제공하는 개별 업체 링크 중 일부는 응답 상태가 미검증입니다.</p>
   <h2>지도</h2><p>출처 · 일본 국토지리원 지구지도 일본. Data of Japan이 변환한 자료를 사용해 웹 표시용으로 간략화했습니다. ${link('Data of Japan / land','https://github.com/dataofjapan/land')}</p>
-  ${location.hostname?.endsWith('.chatgpt.site')?'<h2>프로젝트 파일</h2><p><a href="japan-graduation-trip-2027.zip" download>소스코드 및 정적 사이트 ZIP 다운로드</a></p>':''}<h2>이미지</h2><p>후지산 홈 배너와 오사카, 도쿄, 오타루, 후쿠오카, 오키나와, 후지산 카드의 시각 자료는 OpenAI ImageGen으로 제작한 AI 삽화입니다. 모두 프로젝트에 WebP 파일로 저장했습니다.</p></div>`);
+  ${location.hostname?.endsWith('.chatgpt.site')?'<h2>프로젝트 파일</h2><p><a href="japan-graduation-trip-2027.zip" download>소스코드 및 정적 사이트 ZIP 다운로드</a></p>':''}<h2>이미지</h2><p>여행지 이미지는 각 상세 페이지에 유형과 출처를 표시합니다. AI 삽화 표시는 OpenAI ImageGen으로 제작한 시각 자료를 뜻합니다. Wikimedia Commons 사진은 상세 페이지에서 저작자와 라이선스를 확인할 수 있습니다. 모든 이미지는 프로젝트에 WebP로 저장했습니다.</p></div>`);
 }
 function save() {
   if(cloud.savePersonal(state)){count();return;}
@@ -352,13 +354,15 @@ menu.addEventListener('click',()=>{
   menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'메뉴 닫기':'메뉴 열기');
 });
 document.querySelector('#close-dialog').addEventListener('click',()=>dialog.close());
-main.addEventListener('error',e=>{
+function fallbackImage(e){
   if(e.target instanceof HTMLImageElement&&e.target.hasAttribute('data-fallback')){
     e.target.removeAttribute('data-fallback');
     e.target.src='images/fallback.svg';
     e.target.alt='이미지를 불러오지 못했습니다.';
   }
-},true);
+}
+main.addEventListener('error',fallbackImage,true);
+dialog.addEventListener('error',fallbackImage,true);
 main.addEventListener('click',event=>{
   if(cloud.onClick(event))return;
   const el=event.target.closest('[data-action]');
@@ -374,7 +378,7 @@ main.addEventListener('click',event=>{
     case 'open-budget': state.budget.id=id;state.budget.days=selection.detailDays+3;save();go('budget');break;
     case 'detail-days': selection.detailDays=i;render();break;
     case 'plan-days': selection.planDays=i;render();break;
-    case 'zoom-photo': dialogBody.innerHTML=photo(byId.get(id));dialog.showModal();break;
+    case 'zoom-photo': dialogBody.innerHTML=photo(byId.get(id))+(tripImages[id].ai?'<p class="muted">AI 삽화</p>':'');dialog.showModal();break;
     case 'map-pin': selection.mapId=id;selection.mapPref=byId.get(id).pref;render();break;
     case 'map-pref': setMapPref(i);render();break;
     case 'map-reset': selection.zoom=1;selection.center=[340,270];render();break;
