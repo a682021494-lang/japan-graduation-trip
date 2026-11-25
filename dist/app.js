@@ -162,9 +162,17 @@ function planFor(id=selection.planId, index=selection.planDays) {
   return custom?.length===d.itineraries[index].length ? custom : d.itineraries[index].map(line=>({stops:line.split('→'),memo:''}));
 }
 function setPlan(days) { state.plans[selection.planId+'-'+selection.planDays]=days; save(); }
-function dayText(d,day,i,days) {
-  const first = i===0, last=i===days.length-1;
-  return [first?'도착 후 시작 시간 조정':last?'출발 전 공항 이동 시간 확보':'오전부터 이동',...day.stops, d.food.split(',')[0]+' 등 식사',last?'야간 일정 없음':'저녁은 숙소 인근에서'].join(' → ');
+function dayBlocks(d, day, i, length) {
+  const first = i===0, last = i===length-1;
+  const split = Math.ceil(day.stops.length/2);
+  const food = d.food.split(',').map(name=>name.trim());
+  return [
+    ['오전',first?'공항 도착과 시내 이동':day.stops.slice(0,split).join(' → ')||'여유 시간'],
+    ['점심',food[0]],
+    ['오후',(first?day.stops:day.stops.slice(split)).join(' → ')||(last?'공항 이동':'현지 상황에 따라 오전 일정 이어서')],
+    ['저녁',last?'항공편에 맞춰 식사':food[1]||food[0]],
+    ['야간',last?'귀국편 시간 확보':'숙소 주변 산책 또는 휴식']
+  ];
 }
 function planPage() {
   const d = byId.get(selection.planId);
@@ -172,10 +180,10 @@ function planPage() {
   const encoded = s => encodeURIComponent(s);
   return page('ITINERARY','여행 일정','추천 코스를 바탕으로 방문 순서와 메모를 편집하세요.',`<div class="stack">
   <div class="panel row noprint"><form id="plan-choice" class="tools-select">${select('여행지','city',destinationOptions(),d.id)}</form>${tabs('plan-days',selection.planDays)}</div>
-  <p class="notice">편집 내용은 자동 저장됩니다. 첫날과 마지막 날은 항공편 시간에 맞추세요. 실제 경로와 티켓 가격이 정해지면 메모에 이동시간과 비용을 적어 두세요.</p>
+  <p class="notice">편집 내용은 자동 저장됩니다. 첫날과 마지막 날은 항공편 시간에 맞추세요. 시간대는 이동 순서를 고려해 조정하세요. 실제 경로와 티켓 가격이 정해지면 메모에 기록할 수 있습니다.</p>
   <section class="two"><div><h2>${esc(d.name)} · ${months[selection.planDays]}</h2><div class="timeline" style="margin-top:12px">${days.map((day,i)=>`<article class="day">
     <div class="day-head"><h3>${i+1}일차</h3><span class="row noprint"><button class="icon" data-action="move-day" data-day="${i}" data-index="-1" aria-label="앞 날짜로 이동" ${i===0?'disabled':''}>↑</button><button class="icon" data-action="move-day" data-day="${i}" data-index="1" aria-label="뒤 날짜로 이동" ${i===days.length-1?'disabled':''}>↓</button></span></div>
-    <p class="muted">${esc(dayText(d,day,i,days))}</p>
+    <dl class="day-blocks">${dayBlocks(d,day,i,days.length).map(([label,value])=>`<dt>${label}</dt><dd>${esc(value)}</dd>`).join('')}</dl>
     <ol class="stops">${day.stops.map((s,j)=>`<li><a href="${mapLink(s,d.name)}" target="_blank" rel="noopener noreferrer">${esc(s)} ↗</a><span class="row noprint">${[['↑','앞으로',-1,j===0],['↓','뒤로',1,j===day.stops.length-1],['×','삭제',0,false]].map(([ch,l,delta,disable])=>`<button class="icon" data-action="move-stop" data-day="${i}" data-stop="${j}" data-index="${delta}" aria-label="${esc(s+' '+l)}" ${disable?'disabled':''}>${ch}</button>`).join('')}</span></li>`).join('')}</ol>
     <form data-add-stop="${i}" class="noprint"><input name="stop" maxlength="160" required aria-label="${i+1}일차 장소 추가" placeholder="관광지나 식당 추가" list="plan-places"><button class="btn">추가</button></form>
     <label>메모<textarea rows="2" maxlength="2000" data-memo="${i}">${esc(day.memo)}</textarea></label>
@@ -257,7 +265,7 @@ function sourcesPage() {
   <p>${link('일본 정부 연령 안내',sourceLinks.age)} · ${link('일본 외무성 사증 면제 안내',sourceLinks.visa)} · ${link('Visit Japan Web',sourceLinks.visit)} · ${link('일본정부관광국',sourceLinks.japan)}</p>
   <p>여행 순위와 비용 범위는 제공된 명세서의 계획용 편집값입니다. 항공 운항, 운영시간 및 가격은 이용 날짜에 공식 판매처에서 확인하세요. 상세 페이지에서 제공하는 개별 업체 링크 중 일부는 응답 상태가 미검증입니다.</p>
   <h2>지도</h2><p>출처 · 일본 국토지리원 지구지도 일본. Data of Japan이 변환한 자료를 사용해 웹 표시용으로 간략화했습니다. ${link('Data of Japan / land','https://github.com/dataofjapan/land')}</p>
-  <h2>이미지</h2><p>후지산 홈 배너와 오사카, 도쿄, 오타루, 후쿠오카, 오키나와, 후지산 카드의 시각 자료는 OpenAI ImageGen으로 제작한 AI 삽화입니다. 모두 프로젝트에 WebP 파일로 저장했습니다.</p></div>`);
+  <h2>프로젝트 파일</h2><p><a href="japan-graduation-trip-2027.zip" download>소스코드 및 정적 사이트 ZIP 다운로드</a></p><h2>이미지</h2><p>후지산 홈 배너와 오사카, 도쿄, 오타루, 후쿠오카, 오키나와, 후지산 카드의 시각 자료는 OpenAI ImageGen으로 제작한 AI 삽화입니다. 모두 프로젝트에 WebP 파일로 저장했습니다.</p></div>`);
 }
 function save() {
   try {localStorage.setItem(key,JSON.stringify(state));storageAvailable=true;}

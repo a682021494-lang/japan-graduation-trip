@@ -7,3 +7,5 @@
 @media print{.site-head,footer,.noprint,#status,.day form,.day .icon{display:none!important}.wrap{width:100%}.page{padding:0}.panel,.day{break-inside:avoid}body{background:white}}
 
 .detail-cover{height:auto}.compare-table .card-visual{height:91px;font-size:12px}.saved-link.active{border-color:#b54038;color:#b54038}
+
+.day-blocks{display:grid;grid-template-columns:44px 1fr;gap:4px 10px;margin:8px 0;font-size:13px;color:var(--dim)}.day-blocks dt{font-weight:750}.day-blocks dd{margin:0}
