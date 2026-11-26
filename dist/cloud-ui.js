@@ -45,7 +45,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
     } else header.innerHTML=account.mode==='guest'?loginButton:`<a href="#groups" class="btn">친구들과 여행</a>`;
   }
   function updateView() {
-    if(busy||main.matches?.(':has(input:focus, textarea:focus, select:focus)')){deferred=true;return;}
+    if(busy||main.matches?.(':has(input:focus, textarea:focus, select:focus, [data-travel-draft])')){deferred=true;return;}
     deferred=false;refresh();
   }
   function changed(value){
@@ -217,7 +217,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
       ${group.closing?'<p class="notice">소유자가 그룹을 정리 중입니다.</p>':''}
       ${writable&&admin?`<details class="cloud-edit"><summary>그룹 이름 변경</summary>${form('rename',textInput('name','새 그룹 이름',group.name,70)+submit('이름 저장'))}</details>`:''}
       ${writable?`<p class="notice">초대 코드 <code>${esc(group.inviteCode)}</code> · 링크나 코드를 받은 로그인 사용자가 그룹에 참여할 수 있습니다.</p>`:''}
-      ${extendedGroups?`<section class="panel stack"><h2>그룹 여행 기간</h2>${writable&&admin?form('travel',durationControl(trip.days,esc,'data-group-duration')+`<div class="form-grid">${travelDates(trip,esc)}</div>`):`<p>${duration(trip.days)} ${trip.departure?' · '+esc(trip.departure)+' ~ '+dateAfter(trip.departure,trip.days-1):''}</p>`}</section>`:''}
+      ${extendedGroups?`<section class="panel stack"><h2>그룹 여행 기간</h2>${writable&&admin?form('travel',durationControl(trip.days,esc,'data-group-duration')+`<div class="form-grid">${travelDates(trip,esc)}</div><div>${submit('여행 날짜 저장')}</div>`):`<p>${duration(trip.days)} ${trip.departure?' · '+esc(trip.departure)+' ~ '+dateAfter(trip.departure,trip.days-1):''}</p>`}</section>`:''}
       <div class="two"><section class="panel stack"><h2>여행지 후보</h2><p class="muted">가장 선호하는 후보 한 곳에 투표하고, 각 후보에 찬반을 표시할 수 있습니다.</p>${writable&&options.length?form('candidate',inputSelect('destination','여행지',options)+submit('후보 추가')):''}
         ${candidatesList?`<ul class="cloud-list">${candidatesList}</ul>`:'<p>아직 후보가 없습니다.</p>'}</section>
       <section class="panel stack"><h2>여행 기간 투표</h2>${writable&&extendedGroups?form('vote-days',numberInput('days','희망 여행 일수',personal.days||trip.days,1,maxTripDays)+submit('기간 투표')):''}<ul class="cloud-list">${durationPoll}</ul><p class="muted">내 선택 · ${esc(names.get(personal.destination)||'여행지 미선택')} · ${duration(personal.days)}</p></section></div>
@@ -284,6 +284,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
     if(!name)return false;
     e.preventDefault();
     const data=Object.fromEntries(new FormData(target));
+    if(name==='travel')delete target.dataset.travelDraft;
     const gid=view.arg,id=target.dataset.item,expected=Number(target.dataset.revision);
     const commands={
       nickname:()=>client.nickname(data.nickname),
@@ -318,9 +319,15 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
       !confirm('기간 밖 공동 일정은 보관되고 다시 늘리면 표시됩니다. 기간을 줄일까요?'))return;
     await client.setTravel(view.arg,next,before);
   }
+  main.addEventListener('input',event=>{
+    const input=event.target, form=input.form;
+    if(form?.dataset.cloudForm!=='travel'||input.type!=='date')return;
+    form.dataset.travelDraft='';
+    if(input.name==='departure')form.elements.returnDate.value=dateAfter(input.value,groupTravel().days-1);
+  });
   main.addEventListener('change',event=>{
     const input=event.target;
-    if(input.form?.dataset.cloudForm!=='travel')return;
+    if(input.form?.dataset.cloudForm!=='travel'||input.name!=='days')return;
     const previous=groupTravel();
     const values={...previous,[input.name]:input.value};
     input.blur();

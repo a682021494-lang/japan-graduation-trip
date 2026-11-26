@@ -27,14 +27,17 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci && npm run build && npm run test:cloud && node scripts/render-check.mjs
-      - name: Install WebKit for browser QA
-        run: npx playwright install --with-deps webkit
-      - name: Test Firestore rules, browsers and synchronized travel editing
+      - name: Test Firestore rules, Chrome and synchronized travel editing
         env:
           TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: |
           npx firebase emulators:exec --only auth,firestore,hosting --project demo-trip-2027 \
-            'node --test scripts/firestore.test.mjs && npm run test:browser && node --test scripts/guest-browser.test.mjs && TRIP_QA_ENGINE=webkit node --test scripts/guest-browser.test.mjs && node scripts/image-smoke.mjs'
+            'node --test scripts/firestore.test.mjs && npm run test:browser && node --test scripts/guest-browser.test.mjs && node scripts/image-smoke.mjs'
+      - name: Test WebKit
+        run: |
+          npx playwright install --with-deps webkit
+          npx firebase emulators:exec --only hosting --project demo-trip-2027 \
+            'TRIP_QA_ENGINE=webkit node --test scripts/guest-browser.test.mjs'
       - name: Test group compatibility with deployed rules
         if: vars.FIREBASE_EXTENDED_GROUPS != 'true'
         env:
