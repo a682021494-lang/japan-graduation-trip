@@ -200,6 +200,24 @@ export function reauthenticateWithPopup(user) {
     await mobile.getByRole('button',{name:'변경 저장'}).click();
     await owner.getByText('1일차 · 09:00 · 도쿄역 산책').waitFor();
 
+    if(!legacy){
+      let currentTitle='도쿄역 산책';
+      for(let i=1;i<=16;i++){
+        const editor=i%2?owner:mobile;
+        const observer=i%2?mobile:owner;
+        const nextTitle='공동 일정 반복 편집 '+i;
+        await editor.getByText('1일차 · 09:00 · '+currentTitle,{exact:true}).click();
+        await editor.getByLabel('일정 이름',{exact:true}).filter({visible:true}).fill(nextTitle);
+        await editor.getByRole('button',{name:'변경 저장',exact:true}).click();
+        await observer.getByText('1일차 · 09:00 · '+nextTitle,{exact:true}).waitFor();
+        currentTitle=nextTitle;
+        await new Promise(resolve=>setTimeout(resolve,3500));
+      }
+      await mobile.reload();
+      await mobile.getByText('1일차 · 09:00 · '+currentTitle,{exact:true}).waitFor();
+      console.log('공동 일정 16회 교차 편집과 새로고침 후 저장 검증 통과');
+    }
+
     await owner.getByText('예산 수정',{exact:true}).click();
     await owner.getByLabel(legacy?'그룹 전체 예산 (원)':'그룹 고정비 (원)',{exact:true}).fill('500000');
     if(!legacy)await owner.getByLabel('그룹 1박 숙박비 (원)').fill('10000');
