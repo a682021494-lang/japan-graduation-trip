@@ -117,6 +117,15 @@ test('투표 사칭 금지, 후보/일정/예산/공동 경비 편집 및 관리
   await assertFails(updateDoc(shared(carol,'schedule','entry'),{revision:3,title:'외부인'}));
   await assertSucceeds(setDoc(shared(bob,'budget','shared'),{total:500000,memo:'입장료 포함',revision:1}));
   await assertFails(setDoc(shared(bob,'budget','other'),{total:500000,memo:'',revision:1}));
+  await assertFails(updateDoc(group(bob),{travelDays:8,departure:'2027-02-06'}));
+  await assertFails(updateDoc(group(alice),{travelDays:366}));
+  await assertSucceeds(updateDoc(group(alice),{travelDays:8,departure:'2027-02-06'}));
+  await assertSucceeds(setDoc(shared(bob,'schedule','late'),{...visit,day:8}));
+  await assertFails(setDoc(shared(bob,'schedule','outside'),{...visit,day:9}));
+  await assertSucceeds(updateDoc(group(alice),{travelDays:1}));
+  assert.equal((await assertSucceeds(getDoc(shared(bob,'schedule','late')))).data().day,8);
+  await assertSucceeds(deleteDoc(shared(bob,'schedule','late')));
+  await assertSucceeds(updateDoc(shared(bob,'budget','shared'),{nightly:10000,foodDaily:20000,transitDaily:30000,revision:2}));
   const entries=[JSON.stringify({id:'ticket',title:'입장료',amount:1000})];
   await assertSucceeds(setDoc(shared(bob,'expenses','bob'),{entries}));
   await assertFails(setDoc(shared(bob,'expenses','alice'),{entries}));

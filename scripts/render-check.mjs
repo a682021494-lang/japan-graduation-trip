@@ -24,7 +24,7 @@ const routes = {
   'trip/osaka':'유니버설 스튜디오 재팬',
   'trip/city-1':'관광 명소',
   compare:'비교할 여행지를 추가해 주세요.',
-  plan:'난바',
+  plan:'여행 일정',
   budget:'1인당 숙박 부담액',
   prep:'0 / 23개 완료',
   saved:'JSON 내보내기',

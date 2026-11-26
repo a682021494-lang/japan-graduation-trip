@@ -86,6 +86,18 @@ export function reauthenticateWithPopup(user) {
     await go(alternate,'prep','여행 준비물');
     assert(await alternate.locator('[data-check="0-0"]').isChecked());
 
+    await go(owner,'plan','여행 일정');
+    await owner.getByLabel('여행 일수',{exact:true}).fill('8');
+    await owner.getByLabel('여행 일수',{exact:true}).press('Tab');
+    await owner.getByLabel('8일차 장소 추가').fill('장기 일정 동기화');
+    await owner.locator('[data-add-stop="7"] button').click();
+    await go(owner,'settings','설정');
+    await owner.getByRole('button',{name:'동기화 재시도'}).click();
+    await owner.getByText('동기화를 마쳤습니다.').waitFor();
+    await go(alternate,'plan','여행 일정');
+    await alternate.getByRole('link',{name:'장기 일정 동기화 ↗'}).waitFor();
+    assert.equal(await alternate.getByLabel('여행 일수',{exact:true}).inputValue(),'8');
+
     await go(owner,'groups','친구들과 여행');
     await owner.getByLabel('그룹 이름').fill('겨울 졸업여행 '+suffix);
     await owner.getByRole('button',{name:'그룹 만들기'}).click();
@@ -106,8 +118,9 @@ export function reauthenticateWithPopup(user) {
     await owner.getByRole('button',{name:'후보 추가',exact:true}).click();
     const tokyo=mobile.getByRole('listitem').filter({has:mobile.getByRole('link',{name:'도쿄',exact:true})});
     await tokyo.getByRole('button',{name:'투표',exact:true}).click();
-    await mobile.getByRole('listitem').filter({hasText:'3박 4일'}).getByRole('button',{name:'투표',exact:true}).click();
-    await owner.getByRole('listitem').filter({hasText:'3박 4일'}).getByText('1표').waitFor();
+    await mobile.getByLabel('희망 여행 일수').fill('6');
+    await mobile.getByRole('button',{name:'기간 투표',exact:true}).click();
+    await owner.getByRole('listitem').filter({hasText:'5박 6일'}).getByText('1표').waitFor();
     await owner.getByRole('listitem').filter({has:owner.getByRole('link',{name:'도쿄',exact:true})}).getByText('1표').waitFor();
     await tokyo.getByRole('button',{name:'찬성 0',exact:true}).click();
     await owner.getByRole('button',{name:'찬성 1',exact:true}).waitFor();
@@ -143,6 +156,11 @@ export function reauthenticateWithPopup(user) {
 
 
 
+    await owner.getByRole('button',{name:'여행 기간 하루 늘리기'}).click();
+    await mobile.getByRole('heading',{name:'4일차',exact:true}).waitFor();
+    await owner.getByLabel('출국일',{exact:true}).fill('2027-02-06');
+    await owner.getByLabel('출국일',{exact:true}).press('Tab');
+    await mobile.getByRole('heading',{name:'4일차 2027-02-09',exact:true}).waitFor();
     await owner.locator('summary').getByText('일정 추가',{exact:true}).click();
     await owner.getByLabel('일정 이름').fill('우에노 박물관');
     await owner.getByRole('button',{name:'일정 추가',exact:true}).click();
@@ -153,10 +171,13 @@ export function reauthenticateWithPopup(user) {
     await owner.getByText('1일차 · 09:00 · 도쿄역 산책').waitFor();
 
     await owner.getByText('예산 수정',{exact:true}).click();
-    await owner.getByLabel('그룹 전체 예산 (원)',{exact:true}).fill('500000');
+    await owner.getByLabel('그룹 고정비 (원)',{exact:true}).fill('500000');
+    await owner.getByLabel('그룹 1박 숙박비 (원)').fill('10000');
     await owner.getByRole('button',{name:'그룹 예산 저장'}).click();
-    await mobile.getByText('₩500,000',{exact:true}).waitFor();
-    assert.equal(await mobile.getByText('₩250,000',{exact:true}).count(),2);
+    await mobile.getByText('₩530,000',{exact:true}).waitFor();
+    assert.equal(await mobile.getByText('₩265,000',{exact:true}).count(),2);
+    await owner.getByRole('button',{name:'여행 기간 하루 늘리기'}).click();
+    await mobile.getByText('₩540,000',{exact:true}).waitFor();
     await mobile.getByLabel('내가 낸 경비 내역').fill('숙박비');
     await mobile.getByLabel('금액 (원)',{exact:true}).fill('20000');
     await mobile.getByRole('button',{name:'공동 경비 추가'}).click();
@@ -175,7 +196,7 @@ export function reauthenticateWithPopup(user) {
     await mobile.getByRole('button',{name:'회원 탈퇴 및 데이터 삭제'}).click();
     await mobile.getByRole('heading',{name:/우리의 첫 졸업여행/}).waitFor();
     await owner.getByRole('heading',{name:'구성원 1명'}).waitFor();
-    await owner.getByRole('listitem').filter({hasText:'3박 4일'}).getByText('0표').waitFor();
+    await owner.getByRole('listitem').filter({hasText:'5박 6일'}).getByText('0표').waitFor();
     await owner.getByText('남겨진 의견이 없습니다.',{exact:true}).waitFor();
 
     await go(owner,'settings','설정');

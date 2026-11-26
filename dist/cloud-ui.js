@@ -1,16 +1,15 @@
-import { calculate, formatMoney, freshState } from './logic.js';
+import { calculate, formatMoney, freshState, durationControl, durationLabel, maxTripDays, travelDates, dateAfter, travelSettings, tripDays } from './logic.js';
 import { expenseEntries, inviteCode, settlement, splitShare, TripError } from './cloud-model.js';
 
 const cloudRoutes = new Set(['profile','groups','group','join','settings','privacy']);
-const schedules = ['2박 3일','3박 4일'];
 const success = {
   nickname:'닉네임을 저장했습니다.', 'merge-guest':'게스트 데이터를 가져왔습니다.', flush:'동기화를 마쳤습니다.', candidate:'후보를 추가했습니다.',
-  schedule:'일정을 저장했습니다.', budget:'그룹 예산을 공유했습니다.', expense:'공동 경비를 추가했습니다.',
+  schedule:'일정을 저장했습니다.', 'group-template':'공동 일정에 템플릿을 추가했습니다.', budget:'그룹 예산을 공유했습니다.', expense:'공동 경비를 추가했습니다.',
   place:'공동 장소를 저장했습니다.', rename:'그룹 이름을 변경했습니다.', date:'출발 날짜 후보를 추가했습니다.', task:'준비 항목을 추가했습니다.', opinion:'의견을 저장했습니다.',
   rotate:'새 초대 코드를 발급했습니다.', transfer:'그룹 소유권을 이전했습니다.'
 };
 const money=n=>'₩'+formatMoney(n);
-const duration=n=>schedules[n-3]||'선택 안 함';
+const duration=n=>n?durationLabel(n):'선택 안 함';
 const safePhoto=url=>{
   try {
     const parsed=new URL(url);
@@ -126,8 +125,13 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
     return page('GROUP INVITE','여행 그룹 초대','참여하면 그룹 구성원에게 닉네임과 그룹 활동이 표시됩니다.',content);
   }
   const inputSelect=(name,label,options,current='')=>`<label>${label}<select name="${name}" required>${options.map(([v,l])=>`<option value="${esc(v)}"${String(v)===String(current)?' selected':''}>${esc(l)}</option>`).join('')}</select></label>`;
+  function groupTravel() {
+    const {group,schedule}=shared;
+    return {days:tripDays(group.travelDays,Math.max(3,...Object.values(schedule).map(item=>item.day))),
+      savedDays:group.travelDays,departure:group.departure||''};
+  }
   function scheduleForm(id='',value={day:1,time:'09:00',title:'',memo:'',revision:0}){
-    return form('schedule',`<div class="form-grid">${numberInput('day','일차',value.day,1,4)}<label>시간<input type="time" name="time" value="${esc(value.time)}" required></label></div>
+    return form('schedule',`<div class="form-grid">${numberInput('day','일차',value.day,1,groupTravel().days)}<label>시간<input type="time" name="time" value="${esc(value.time)}" required></label></div>
       <label>일정 이름<input name="title" type="text" value="${esc(value.title)}" maxlength="100" list="group-attractions" required></label><label>메모<textarea name="memo" rows="2" maxlength="1000">${esc(value.memo)}</textarea></label>
       <div class="row">${submit(id?'변경 저장':'일정 추가')}${id?action('remove-schedule','삭제',`data-item="${esc(id)}" data-revision="${value.revision}"`):''}</div>`,
       `data-item="${esc(id)}" data-revision="${value.revision}"`);
@@ -144,9 +148,11 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
     const personal=votes[uid]||{};
     const catalogueRows=catalogue();
     const names=new Map(catalogueRows.map(d=>[d.id,d.name]));
+    const groupTemplates=catalogueRows.flatMap(d=>d.itineraries?.map((lines,i)=>[d.id+'-'+i,d.name+' · '+duration(lines.length)])||[]);
     const attractions=new Set(catalogueRows.filter(d=>Object.hasOwn(candidates,d.id)).flatMap(d=>d.attractions||[]));
     for(const place of Object.values(places))attractions.add(place.title);
     const attractionOptions=[...attractions].map(name=>`<option value="${esc(name)}"></option>`).join('');
+    const trip=groupTravel();
     const participantIds=Object.keys(members);
     const ballots=Object.values(votes);
     const options=[...names].filter(([id])=>!Object.hasOwn(candidates,id));
@@ -160,7 +166,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
       }).join('');
       return `<li><a href="#trip/${esc(id)}">${esc(names.get(id)||id)}</a><span class="pill">${count}표</span><span class="row">${writable?action('vote-destination',personal.destination===id?'투표 취소':'투표',`data-item="${esc(id)}" aria-pressed="${personal.destination===id}"`):''}${reactions}${writable&&admin?action('remove-candidate','후보 삭제',`data-item="${esc(id)}"`):''}</span></li>`;
     }).join('');
-    const durationPoll=[3,4].map(days=>`<li><b>${duration(days)}</b><span class="pill">${ballots.filter(v=>v.days===days).length}표</span>
+    const durationPoll=[...new Set(ballots.map(v=>v.days).filter(Boolean))].sort((a,b)=>a-b).map(days=>`<li><b>${duration(days)}</b><span class="pill">${ballots.filter(v=>v.days===days).length}표</span>
       ${writable?action('vote-days',personal.days===days?'투표 취소':'투표',`data-item="${days}" aria-pressed="${personal.days===days}"`):''}</li>`).join('');
     const dateRows=Object.keys(dates).sort().map(date=>{
       const chosen=personal.date===date;
@@ -188,11 +194,19 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
       return `<li><b>${nickname(id)}${id===uid?' (나)':''}</b><span class="pill">${role}</span>
       ${owner&&id!==uid&&!group.closing?`<span class="row">${writable?action('role',m.role==='admin'?'관리자 해제':'관리자로 지정',`data-item="${esc(id)}" data-next="${m.role==='admin'?'member':'admin'}"`):''}${action('transfer','소유권 이전',`data-item="${esc(id)}"`)}</span>`:''}</li>`;
     }).join('');
-    const itinerary=Object.entries(schedule).sort((a,b)=>a[1].day-b[1].day||a[1].time.localeCompare(b[1].time)).map(([id,item])=>
-      `<details class="cloud-edit"><summary>${item.day}일차 · ${esc(item.time)} · ${esc(item.title)}</summary>${writable?scheduleForm(id,item):`<p>${esc(item.memo)}</p>`}</details>`).join('');
+    const days=Array.from({length:trip.days},()=>[]);
+    let archived=0;
+    for(const [id,item] of Object.entries(schedule).sort((a,b)=>a[1].time.localeCompare(b[1].time))){
+      const day=days[item.day-1];
+      if(day)day.push(`<details class="cloud-edit"><summary>${item.day}일차 · ${esc(item.time)} · ${esc(item.title)}</summary>${writable?scheduleForm(id,item):`<p>${esc(item.memo)}</p>`}</details>`);
+      else archived++;
+    }
+    const itinerary=days.map((rows,i)=>`<article class="day stack"><h3>${i+1}일차 ${trip.departure?`<small>${dateAfter(trip.departure,i)}</small>`:''}</h3>
+      ${rows.join('')||'<p class="muted">등록된 일정이 없습니다.</p>'}</article>`).join('');
     const budgetValue=budget.shared;
+    const budgetTotal=budgetValue?budgetValue.total+(budgetValue.nightly||0)*(trip.days-1)+((budgetValue.foodDaily||0)+(budgetValue.transitDaily||0))*trip.days:0;
     const result=settlement(participantIds,expenses);
-    const budgetShares=budgetValue?result.balances.map((row,index)=>`<li><span>${nickname(row.uid)}${row.uid===uid?' (나)':''}</span><b>${money(splitShare(budgetValue.total,result.balances.length,index))}</b></li>`).join(''):'';
+    const budgetShares=budgetValue?result.balances.map((row,index)=>`<li><span>${nickname(row.uid)}${row.uid===uid?' (나)':''}</span><b>${money(splitShare(budgetTotal,result.balances.length,index))}</b></li>`).join(''):'';
     const expenseList=Object.entries(expenses).flatMap(([id,d])=>expenseEntries(d.entries).map(e=>`<li><span>${esc(e.title)} <small>${nickname(id)}</small></span><b>${money(e.amount)}</b>${writable&&id===uid?action('remove-expense','삭제',`data-item="${esc(e.id)}"`):''}</li>`)).join('');
     const transfers=result.transfers.map(r=>`<li><span>${nickname(r.from)} → ${nickname(r.to)}</span><b>${money(r.amount)}</b></li>`).join('');
     return page('GROUP',esc(group.name),`${group.memberCount}명 참여 · 변경 사항 실시간 동기화`,`<div class="stack group-page">${message()}
@@ -202,18 +216,19 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
       ${group.closing?'<p class="notice">소유자가 그룹을 정리 중입니다.</p>':''}
       ${writable&&admin?`<details class="cloud-edit"><summary>그룹 이름 변경</summary>${form('rename',textInput('name','새 그룹 이름',group.name,70)+submit('이름 저장'))}</details>`:''}
       ${writable?`<p class="notice">초대 코드 <code>${esc(group.inviteCode)}</code> · 링크나 코드를 받은 로그인 사용자가 그룹에 참여할 수 있습니다.</p>`:''}
+      <section class="panel stack"><h2>그룹 여행 기간</h2>${writable&&admin?form('travel',durationControl(trip.days,esc,'data-group-duration')+`<div class="form-grid">${travelDates(trip,esc)}</div>`):`<p>${duration(trip.days)} ${trip.departure?' · '+esc(trip.departure)+' ~ '+dateAfter(trip.departure,trip.days-1):''}</p>`}</section>
       <div class="two"><section class="panel stack"><h2>여행지 후보</h2><p class="muted">가장 선호하는 후보 한 곳에 투표하고, 각 후보에 찬반을 표시할 수 있습니다.</p>${writable&&options.length?form('candidate',inputSelect('destination','여행지',options)+submit('후보 추가')):''}
         ${candidatesList?`<ul class="cloud-list">${candidatesList}</ul>`:'<p>아직 후보가 없습니다.</p>'}</section>
-      <section class="panel stack"><h2>여행 기간 투표</h2><ul class="cloud-list">${durationPoll}</ul><p class="muted">내 선택 · ${esc(names.get(personal.destination)||'여행지 미선택')} · ${duration(personal.days)}</p></section></div>
+      <section class="panel stack"><h2>여행 기간 투표</h2>${writable?form('vote-days',numberInput('days','희망 여행 일수',personal.days||trip.days,1,maxTripDays)+submit('기간 투표')):''}<ul class="cloud-list">${durationPoll}</ul><p class="muted">내 선택 · ${esc(names.get(personal.destination)||'여행지 미선택')} · ${duration(personal.days)}</p></section></div>
       <div class="two"><section class="panel stack"><h2>여행 날짜 투표</h2><p class="muted">출발 날짜 후보 중 한 곳에 투표할 수 있습니다.</p>
         ${writable?form('date','<label>출발 날짜<input type="date" name="date" required></label>'+submit('날짜 후보 추가')):''}
         ${dateRows?`<ul class="cloud-list">${dateRows}</ul>`:'<p>등록된 날짜 후보가 없습니다.</p>'}</section>
       <section class="panel stack"><h2>공동 준비 체크리스트</h2>
         ${writable?form('task',textInput('title','준비 항목','',100)+submit('준비 항목 추가')):''}
         ${taskRows?`<ul class="cloud-list">${taskRows}</ul>`:'<p>등록된 준비 항목이 없습니다.</p>'}</section></div>
-      <div class="two"><section class="panel stack"><h2>공동 일정</h2><datalist id="group-attractions">${attractionOptions}</datalist>${itinerary||'<p>등록한 일정이 없습니다.</p>'}${writable?`<details class="cloud-edit"><summary>일정 추가</summary>${scheduleForm()}</details>`:''}</section>
-      <section class="panel stack"><h2>공유 예산</h2>${budgetValue?`<p class="total">${money(budgetValue.total)}</p><p>${esc(budgetValue.memo)}</p><h3>개인별 예상 부담금</h3><p class="muted">그룹 예산을 현재 인원으로 균등 분담한 예상 금액입니다.</p><ul class="cloud-list">${budgetShares}</ul>`:'<p>아직 공유 예산이 없습니다.</p>'}
-      ${writable?`<details class="cloud-edit"><summary>예산 수정</summary>${form('budget',numberInput('total','그룹 전체 예산 (원)',budgetValue?.total||'',1,1e8)+textInput('memo','예산 메모',budgetValue?.memo||'',400,false)+
+      <div class="two"><section class="panel stack"><h2>공동 일정</h2>${writable&&admin?form('group-template',inputSelect('template','공동 일정 템플릿',[['','선택하세요'],...groupTemplates])+submit('템플릿 추가'),'','row'):''}<datalist id="group-attractions">${attractionOptions}</datalist>${itinerary}${archived?`<p class="notice">기간 밖 일정 ${archived}개가 보관 중입니다. 기간을 늘리면 다시 표시됩니다.</p>`:''}${writable?`<details class="cloud-edit"><summary>일정 추가</summary>${scheduleForm()}</details>`:''}</section>
+      <section class="panel stack"><h2>공유 예산</h2>${budgetValue?`<p class="total">${money(budgetTotal)}</p><p>${esc(budgetValue.memo)}</p><h3>개인별 예상 부담금</h3><p class="muted">그룹 예산을 현재 인원으로 균등 분담한 예상 금액입니다.</p><ul class="cloud-list">${budgetShares}</ul>`:'<p>아직 공유 예산이 없습니다.</p>'}
+      ${writable?`<details class="cloud-edit"><summary>예산 수정</summary>${form('budget',numberInput('total','그룹 고정비 (원)',budgetValue?.total||0,0,1e8)+numberInput('nightly','그룹 1박 숙박비 (원)',budgetValue?.nightly||0,0,1e8)+numberInput('foodDaily','그룹 1일 식비 (원)',budgetValue?.foodDaily||0,0,1e8)+numberInput('transitDaily','그룹 1일 교통비 (원)',budgetValue?.transitDaily||0,0,1e8)+textInput('memo','예산 메모',budgetValue?.memo||'',400,false)+
       `<div class="row">${submit('그룹 예산 저장')}${action('personal-budget','내 예산 금액 채우기')}</div>`,`data-revision="${budgetValue?.revision||0}"`)}</details>`:''}</section></div>
       <div class="two"><section class="panel stack"><h2>공동 경비 정산</h2><p>현재 구성원이 사용한 공동 경비를 균등 분담합니다.</p><p class="total">${money(result.total)}</p>
       ${writable?form('expense',textInput('title','내가 낸 경비 내역','',100)+numberInput('amount','금액 (원)','',1,1e8)+submit('공동 경비 추가')):''}
@@ -280,13 +295,43 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
       place:()=>client.setPlace(gid,id,data,expected),
       opinion:()=>client.opinion(gid,data.memo),
       schedule:()=>client.setSchedule(gid,id,data,expected),
+      'vote-days':()=>client.vote(gid,{days:tripDays(data.days,0)}),
+      travel:()=>saveGroupTravel(data),
+      'group-template':()=>{
+        const match=data.template?.match(/^(.+)-([01])$/);
+        const lines=match&&catalogue().find(d=>d.id===match[1])?.itineraries?.[Number(match[2])];
+        if(!lines)throw new TripError('공동 일정 템플릿을 선택해 주세요.');
+        return client.addTemplate(gid,data.template,lines,groupTravel());
+      },
       budget:()=>client.setBudget(gid,data,expected),
       expense:()=>client.expense(gid,data)
     };
     if(Object.hasOwn(commands,name)) void run(async()=>{await commands[name]();if(!id&&['schedule','expense','date','task','place'].includes(name))target.reset();},name);
     return true;
   }
+  async function saveGroupTravel(input) {
+    const before=groupTravel();
+    const next=travelSettings(input);
+    if(!next)throw new TripError('출국일, 귀국일과 여행 일수를 확인해 주세요.');
+    if(next.days<before.days&&Object.values(shared.schedule).some(item=>item.day>next.days)&&
+      !confirm('기간 밖 공동 일정은 보관되고 다시 늘리면 표시됩니다. 기간을 줄일까요?'))return;
+    await client.setTravel(view.arg,next,before);
+  }
+  main.addEventListener('change',event=>{
+    const input=event.target;
+    if(input.form?.dataset.cloudForm!=='travel')return;
+    const previous=groupTravel();
+    const values={...previous,[input.name]:input.value};
+    input.blur();
+    void run(()=>saveGroupTravel(values),'travel');
+  });
   function onClick(e){
+    const step=e.target.closest?.('[data-group-duration] [data-duration-step]');
+    if(step){
+      const current=groupTravel();
+      void run(()=>saveGroupTravel({...current,days:current.days+Number(step.dataset.durationStep)}),'travel');
+      return true;
+    }
     const control=e.target.closest?.('[data-cloud-action]');
     if(!control)return false;
     const name=control.dataset.cloudAction,gid=view.arg,id=control.dataset.item;

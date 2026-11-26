@@ -71,11 +71,7 @@ export function expenseEntries(raw) {
     return [];
   }).slice(0,30);
 }
-export function validTripDate(value) {
-  if (!/^[1-9][0-9]{3}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/.test(value)) return false;
-  const date=new Date(value+'T00:00:00Z');
-  return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value;
-}
+export { validTripDate } from './logic.js';
 export function splitShare(total,count,index) {
   return count>0 ? Math.floor(total/count)+(index<total%count?1:0) : 0;
 }

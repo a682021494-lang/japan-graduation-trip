@@ -1,4 +1,4 @@
-import { freshState } from './logic.js';
+import { freshState, travelSettings, tripDays, dateAfter } from './logic.js';
 import { changedRecords, expenseEntries, inviteCode, makeInviteCode, overlayRecords, recordsFor, stateFor, validTripDate, TripError } from './cloud-model.js';
 
 const demoProject='demo-trip-2027';
@@ -215,7 +215,7 @@ export async function startCloud(events) {
     check(name,'그룹 이름을 입력해 주세요.');
     const target=doc(coll('groups')),gid=target.id,stamp=serverTimestamp();
     const batch=writeBatch(db);
-    batch.set(target,{name,inviteCode:code,ownerUid:s.uid,memberCount:1,closing:false,createdAt:stamp});
+    batch.set(target,{name,inviteCode:code,ownerUid:s.uid,memberCount:1,closing:false,travelDays:3,departure:'',createdAt:stamp});
     batch.set(inviteRef(code),{groupId:gid});
     batch.set(memberRef(gid,s.uid),{nickname:s.profile.nickname,role:'member',joinCode:code,joinedAt:stamp});
     batch.set(indexRef(s.uid,gid),{joinedAt:stamp});
@@ -274,13 +274,17 @@ export async function startCloud(events) {
     const target=shared(gid,kind,id);
     await runTransaction(db,async tx=>{
       const existing=(await tx.get(target)).data();
+      if(kind==='schedule'&&data){
+        const group=(await tx.get(groupRef(gid))).data();
+        check(group&&data.day<=tripDays(group.travelDays,4),'여행 기간 안의 일차를 선택해 주세요.');
+      }
       check((existing?.revision||0)===expected,'다른 친구가 먼저 변경했습니다. 최신 내용을 확인한 뒤 다시 저장해 주세요.');
       if(data)tx.set(target,{...data,revision:expected+1});else tx.delete(target);
     });
   }
   function setSchedule(gid,id,values,expected){
     const data={day:Number(values.day),time:values.time,title:field(values.title,100),memo:field(values.memo,1000)};
-    check(data.title&&Number.isInteger(data.day)&&data.day>=1&&data.day<=4&&/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(data.time),'일차, 시간, 일정 이름을 확인해 주세요.');
+    check(data.title&&Number.isInteger(data.day)&&tripDays(data.day,0)&&/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(data.time),'일차, 시간, 일정 이름을 확인해 주세요.');
     return revise(gid,'schedule',id||doc(coll('groups',gid,'schedule')).id,data,expected);
   }
   async function expense(gid,data,id=''){
@@ -387,6 +391,26 @@ export async function startCloud(events) {
       check(name,'그룹 이름을 입력해 주세요.');
       return updateDoc(groupRef(gid),{name});
     },
+    setTravel:(gid,values,previous)=>runTransaction(db,async tx=>{
+      const target=groupRef(gid),group=(await tx.get(target)).data();
+      check(group&&group.travelDays===previous.savedDays&&(group.departure||'')===previous.departure,
+        '다른 친구가 먼저 기간을 변경했습니다. 새 기간을 확인해 주세요.');
+      const next=travelSettings(values);
+      check(next,'출국일, 귀국일과 여행 일수를 확인해 주세요.');
+      tx.update(target,{travelDays:next.days,departure:next.departure});
+    }),
+    addTemplate:(gid,templateId,lines,previous)=>runTransaction(db,async tx=>{
+      const target=groupRef(gid),group=(await tx.get(target)).data();
+      check(group&&group.travelDays===previous.savedDays&&/^[a-z0-9-]+$/.test(templateId)&&[3,4].includes(lines.length),'여행 일정 템플릿을 확인해 주세요.');
+      const refs=lines.map((_,index)=>shared(gid,'schedule','template-'+templateId+'-'+(index+1)));
+      const existing=await Promise.all(refs.map(ref=>tx.get(ref)));
+      const days=Math.max(previous.days,lines.length);
+      check(!group.departure||dateAfter(group.departure,days-1),'귀국일을 확인해 주세요.');
+      if(group.travelDays!==days)tx.update(target,{travelDays:days});
+      refs.forEach((ref,index)=>{
+        if(!existing[index].exists())tx.set(ref,{day:index+1,time:'09:00',title:field(lines[index],100),memo:'추천 일정 템플릿 · 방문 시각 조정 가능',revision:1});
+      });
+    }),
     addDate:(gid,date)=>{
       check(validTripDate(date),'출발 날짜를 확인해 주세요.');
       return setDoc(shared(gid,'dates',date),{addedAt:serverTimestamp()});
@@ -416,9 +440,9 @@ export async function startCloud(events) {
     removeCandidate:(gid,id)=>deleteDoc(shared(gid,'candidates',id)),
     removeSchedule:(gid,id,expected)=>revise(gid,'schedule',id,null,expected),
     setBudget:(gid,values,expected)=>{
-      const total=Number(values.total);
-      check(Number.isSafeInteger(total)&&total>=1&&total<=1e8,'1원~1억 원 사이의 예산을 입력해 주세요.');
-      return revise(gid,'budget','shared',{total,memo:field(values.memo,400)},expected);
+      const costs=Object.fromEntries(['total','nightly','foodDaily','transitDaily'].map(key=>[key,Number(values[key]||0)]));
+      check(Object.values(costs).every(value=>Number.isSafeInteger(value)&&value>=0&&value<=1e8),'각 예산은 0원~1억 원 사이로 입력해 주세요.');
+      return revise(gid,'budget','shared',{...costs,memo:field(values.memo,400)},expected);
     }
   };
 }

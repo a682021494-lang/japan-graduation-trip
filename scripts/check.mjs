@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
-import { calculate, freshState, matches, move, parseImport } from '../dist/logic.js';
+import { calculate, freshState, matches, move, parseImport, travelSettings, dateAfter, durationLabel } from '../dist/logic.js';
 
 const dist = new URL('../dist/', import.meta.url);
 const read = p => readFile(new URL(p, dist), 'utf8');
@@ -33,8 +33,8 @@ test('8개 권역, 47개 지도 경계, 전체 도시와 추천 코스 구조', 
 
 test('검색, 예산, 유형, 도도부현 조건 동시 적용', () => {
   assert(matches(get('osaka'),{...filters,q:'도톤보리',pref:'26',type:'놀이공원',budget:'custom',custom:'500000'}));
-  assert(!matches(get('osaka'),{...filters,days:'1',budget:'custom',custom:'500000'}));
-  assert(matches(get('fukuoka'),{...filters,days:'0',budget:'0-400000'}));
+  assert(!matches(get('osaka'),{...filters,days:'4',budget:'custom',custom:'500000'}));
+  assert(matches(get('fukuoka'),{...filters,days:'3',budget:'0-400000'}));
   assert(!matches(get('kumamoto'),{...filters,budget:'1000000-'}));
 });
 
@@ -142,4 +142,19 @@ test('겨울 행사 날짜와 18개 코스의 겨울 안내', async () => {
     assert((item.guides||[]).every(id=>ids.includes(id)));
     assert((item.places||[]).every(id=>places[id]));
   }
+});
+
+test('당일치기와 장기 일정 날짜 및 일별 비용을 함께 계산한다', () => {
+  assert.equal(durationLabel(1),'당일치기');
+  assert.equal(dateAfter('2027-01-30',4),'2027-02-03');
+  assert.deepEqual(travelSettings({days:3,departure:'2027-01-30',returnDate:'2027-02-03'}),{days:5,departure:'2027-01-30'});
+  assert.deepEqual(travelSettings({days:3,returnDate:'2027-02-03'}),{days:3,departure:'2027-02-01'});
+  assert.equal(travelSettings({days:3,departure:'2027-02-03',returnDate:'2027-02-01'}),null);
+  const budget={...freshState().budget,rooms:1,roomPrice:100000,people:2,transit:10000,transitDaily:3000,food:20000};
+  assert.equal(calculate({...budget,days:1}).total,66000);
+  assert.equal(calculate({...budget,days:8}).total,1088000);
+  const state=freshState();
+  state.budget={...state.budget,days:365,departure:'2027-01-01'};
+  state.plans['osaka-day-365']=[{stops:['도착'],memo:'마지막 날'}];
+  assert.deepEqual(parseImport(JSON.stringify(state)),state);
 });

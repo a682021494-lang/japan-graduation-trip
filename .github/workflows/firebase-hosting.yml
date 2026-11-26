@@ -26,7 +26,11 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci && npm run build
-      - name: Deploy to Firebase Hosting
+      - name: Test Firestore rules and synchronized travel editing
+        env:
+          TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: npx firebase emulators:exec --only auth,firestore,hosting --project demo-trip-2027 "node --test scripts/firestore.test.mjs && npm run test:browser"
+      - name: Deploy Firestore rules and Firebase Hosting
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JAPAN_GRADUATION_TRIP_2027 }}
         shell: bash
@@ -41,7 +45,7 @@ jobs:
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$credentials"
           unset FIREBASE_SERVICE_ACCOUNT
           GOOGLE_APPLICATION_CREDENTIALS="$credentials" ./node_modules/.bin/firebase deploy \
-            --only hosting --project japan-graduation-trip-2027 --non-interactive
+            --only firestore:rules,hosting --project japan-graduation-trip-2027 --non-interactive
       - name: Verify public entry point and travel data
         shell: bash
         run: |
@@ -67,6 +71,10 @@ jobs:
                cmp -s dist/style.css "$RUNNER_TEMP/hosting-style" &&
                curl --fail --silent --show-error --max-time 15 "$origin/data/areas/prefectures.json" -o "$RUNNER_TEMP/hosting-prefectures" &&
                cmp -s dist/data/areas/prefectures.json "$RUNNER_TEMP/hosting-prefectures" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/logic.js" -o "$RUNNER_TEMP/hosting-logic" &&
+               cmp -s dist/logic.js "$RUNNER_TEMP/hosting-logic" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/cloud-ui.js" -o "$RUNNER_TEMP/hosting-cloud-ui" &&
+               cmp -s dist/cloud-ui.js "$RUNNER_TEMP/hosting-cloud-ui" &&
                grep -iq '^cache-control:.*no-cache' "$RUNNER_TEMP/hosting-headers"; then
               exit 0
             fi
