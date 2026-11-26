@@ -389,6 +389,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
       subscribe();headerState();
     }catch(e){changed({mode:'error',error:explain(e)});}
   };
+  window.addEventListener('online',()=>{if(!client&&account.mode==='unconfigured')void init();});
   return {
     init,routeChanged,onClick,onSubmit,hasRoute:route=>cloudRoutes.has(route),cloudPage,
     locked:()=>Boolean(account.user&&account.mode!=='ready'),

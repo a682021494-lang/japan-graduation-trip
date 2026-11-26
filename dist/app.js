@@ -1,3 +1,5 @@
+import { setupMapGestures, viewBox } from './map-gestures.js';
+import { fitMobileViewport, setupPwa } from './pwa.js';
 import { daylightSource, eventDates, pendingWinterEvents, winterChecked, winterEvents, winterPlans, winterRestrictions } from './data/winter.js';
 import { koreanPrefectureName, setupGeography } from './geography.js';
 import { tripImages } from './data/trip-images.js';
@@ -183,28 +185,42 @@ function templatePicker(d) {
 function project([lon,lat]) {
   return lat>=29 ? [(lon-127)*27+45,(46-lat)*29+22] : [(lon-122)*24+30,(29-lat)*14+445];
 }
+let mapRequest, mapFailed=false;
+function loadMap(){
+  if(paths||mapRequest||mapFailed)return;
+  mapRequest=getJSON('maps/prefectures.json').then(value=>{paths=value;},()=>{mapFailed=true;}).finally(()=>{
+    mapRequest=null;
+    if(location.hash==='#map'||location.hash.startsWith('#map/'))render();
+  });
+}
 function mapPage() {
+  if(!paths){
+    loadMap();
+    return page('MAP','일본 지도','일본 47개 도도부현 지도',mapFailed?`<p class="notice">지도 파일을 불러오지 못했습니다. 연결을 확인해 주세요.</p>${btn('다시 불러오기','map-retry')}`:'<p role="status">지도를 불러오는 중입니다.</p>');
+  }
   const recommended=geo.recommendations(selection.mapPref);
   const d = recommended.find(guide=>guide.id===selection.mapId);
-  const w = 680/selection.zoom;
-  const h = 540/selection.zoom;
   const locationPoint=geo.coordinate();
-  const [x,y] = selection.center;
   const polygons = data.prefectures.map(p=>`<path class="pref ${p.id===selection.mapPref?'active':''}" d="${paths[p.id]}" fill="${regionsColors[data.regions.indexOf(p.region)]}" tabindex="0" role="button" aria-label="${esc(koreanPrefectureName(p))} · ${esc(prefectureNames[String(p.id).padStart(2,'0')])} · ${esc(p.region)}" data-action="map-pref" data-index="${p.id}"></path>`).join('');
   const pins = recommended.map(d=>{
     const [cx,cy]=project(d.xy);
     return `<circle class="map-marker" cx="${cx}" cy="${cy}" r="${d.id===selection.mapId?5.5:3.5}" tabindex="0" role="button" aria-label="${esc(d.name)}" data-action="map-pin" data-id="${d.id}"><title>${esc(d.name)}</title></circle>`;
   }).join('');
-  const selectedPin=locationPoint?(()=>{const [cx,cy]=project(locationPoint);return `<circle cx="${cx}" cy="${cy}" r="6" fill="#bd322d" stroke="#fff" stroke-width="2"><title>선택한 위치</title></circle>`;})():'';
+  const site=geo.selectedPlace();
+  const summary=site?{name:site.place.name,text:site.place.description,url:'#place/'+site.id}:d?{name:d.name,text:d.description,url:detailHref(d.id)}:null;
+  const sheet=summary&&!selection.dismissMapDetails?`<aside class="mobile-map-details" aria-label="선택한 여행지">
+    <div class="row"><h2>${esc(summary.name)}</h2>${btn('닫기','map-close-details','','')}</div>
+    <p>${esc(summary.text)}</p><a class="btn primary" href="${summary.url}">상세 보기</a></aside>`:'';
+  const selectedPin=locationPoint?(()=>{const [cx,cy]=project(locationPoint);return `<circle cx="${cx}" cy="${cy}" r="6" fill="#bd322d" stroke="#fff" stroke-width="2" ${site?'data-action="map-show-details" tabindex="0" role="button" aria-label="선택한 여행지 보기"':''}><title>선택한 위치</title></circle>`;})():'';
   return page('MAP','일본 지도','지도의 도도부현이나 도시를 선택해 위치와 여행 경비를 확인하세요.',`<div class="two">
   <section class="panel stack"><div class="row"><button class="icon" data-action="map-zoom" data-index="1" aria-label="지도 확대">+</button><button class="icon" data-action="map-zoom" data-index="-1" aria-label="지도 축소">−</button>${btn('전체 보기','map-reset')} ${selection.zoom>1?['←','→','↑','↓'].map((a,i)=>`<button class="icon" data-action="map-pan" data-index="${i}" aria-label="지도 ${['왼쪽','오른쪽','위','아래'][i]} 이동">${a}</button>`).join(''):''}</div>
-  <div class="map-shell"><svg viewBox="${x-w/2} ${y-h/2} ${w} ${h}" aria-label="일본 47개 도도부현 지도"><path d="M25 427H196V523H25Z" fill="none" stroke="#8aa5bb" stroke-dasharray="3 3"/><text x="30" y="440" fill="#617d93" font-size="9">오키나와 (삽입도)</text>${polygons}${pins}${selectedPin}</svg><div id="map-tooltip" class="map-tooltip" role="tooltip" hidden></div></div>
+  <div class="map-shell"><svg viewBox="${viewBox(selection.zoom,selection.center)}" aria-label="일본 47개 도도부현 지도"><path d="M25 427H196V523H25Z" fill="none" stroke="#8aa5bb" stroke-dasharray="3 3"/><text x="30" y="440" fill="#617d93" font-size="9">오키나와 (삽입도)</text>${polygons}${pins}${selectedPin}</svg><div id="map-tooltip" class="map-tooltip" role="tooltip" hidden></div></div>
   <div class="tags">${data.regions.map((r,i)=>`<span style="background:${regionsColors[i]}">${r}</span>`).join('')}</div>
   <small>출처 · 일본 국토지리원 지구지도 일본, Data of Japan. 오키나와는 삽입도입니다.</small></section>
   <aside class="stack">${geo.mapPanel()}<div class="panel stack">
   <form id="marker-choice">${select('추천 도시 선택','city',[['','선택하세요'],...recommended.map(g=>[g.id,g.name])],selection.mapId)}</form>
   ${d?`<a class="card-media" href="${detailHref(d.id)}">${photo(d)}${art(d)}</a><h2>${esc(d.name)}</h2><p>${durationLabel(state.budget.days)} · ${priceCell(d)}</p><p><b>일본 도착 공항</b> ${esc(d.airport)}</p><a class="btn primary" href="${detailHref(d.id)}">상세 보기 →</a>`:''}</div>
-  <div class="panel links"><h3>한국 출발 공항</h3><p>${link('청주 CJJ',sourceLinks.cjj)} · ${link('인천 ICN',sourceLinks.icn)}</p><small>도착 공항은 접근 기준입니다. 직항 및 2027년 운항 여부는 항공사에서 날짜별로 확인하세요.</small></div></aside></div>`);
+  <div class="panel links"><h3>한국 출발 공항</h3><p>${link('청주 CJJ',sourceLinks.cjj)} · ${link('인천 ICN',sourceLinks.icn)}</p><small>도착 공항은 접근 기준입니다. 직항 및 2027년 운항 여부는 항공사에서 날짜별로 확인하세요.</small></div></aside>${sheet}</div>`);
 }
 const prefecturePath='[data-action="map-pref"]';
 let mapTooltip;
@@ -482,7 +498,7 @@ function go(route) {
 function routeChanged() {
   const [route,arg]=location.hash.slice(1).split('/');
   cloud.routeChanged(route,arg);
-  if(route==='map'){setMapPref(prefById.has(Number(arg))?Number(arg):0);selection.mapId=selection.pendingMapId||'';selection.pendingMapId='';}
+  if(route==='map'){selection.dismissMapDetails=false;setMapPref(prefById.has(Number(arg))?Number(arg):0);selection.mapId=selection.pendingMapId||'';selection.pendingMapId='';}
   navigation.classList.remove('open');menu.setAttribute('aria-expanded','false');
   render();
   window.scrollTo(0,0);
@@ -559,7 +575,10 @@ main.addEventListener('click',event=>{
     } break;
     case 'open-budget': selection.planId=state.budget.id=id;save();go('budget');break;
     case 'zoom-photo': dialogBody.innerHTML=photo(byId.get(id))+(tripImages[id].ai?'<p class="muted">AI 삽화</p>':'');dialog.showModal();break;
-    case 'map-pin': {const pref=byId.get(id).pref;if(pref!==selection.mapPref){selection.pendingMapId=id;go('map/'+pref);}else{selection.mapId=id;render();}break;}
+    case 'map-retry': mapFailed=false;render();break;
+    case 'map-show-details': selection.dismissMapDetails=false;render();break;
+    case 'map-close-details': selection.dismissMapDetails=true;render();break;
+    case 'map-pin': {selection.dismissMapDetails=false;const pref=byId.get(id).pref;if(pref!==selection.mapPref){selection.pendingMapId=id;go('map/'+pref);}else{selection.mapId=id;render();}break;}
     case 'map-pref': go('map/'+i);break;
     case 'map-reset': selection.zoom=1;selection.center=[340,270];render();break;
     case 'map-zoom': {
@@ -601,7 +620,7 @@ main.addEventListener('click',event=>{
   }
 });
 main.addEventListener('keydown',e=>{
-  if(e.target.matches('[data-action="map-pin"],[data-action="map-pref"]')&&['Enter',' '].includes(e.key)){
+  if(e.target.matches('[data-action="map-pin"],[data-action="map-pref"],[data-action="map-show-details"]')&&['Enter',' '].includes(e.key)){
     e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));
   }
 });
@@ -697,7 +716,7 @@ main.addEventListener('change',async e=>{
     main.querySelector(`#filters select[name="${name}"]`).focus();
   }
   if(form?.id==='plan-choice'&&!cloud.locked()){selection.planId=state.budget.id=el.value;save();render();}
-  if(form?.id==='marker-choice'){const pref=byId.get(el.value)?.pref;if(pref&&pref!==selection.mapPref){selection.pendingMapId=el.value;go('map/'+pref);}else{selection.mapId=el.value;render();}}
+  if(form?.id==='marker-choice'){selection.dismissMapDetails=false;const pref=byId.get(el.value)?.pref;if(pref&&pref!==selection.mapPref){selection.pendingMapId=el.value;go('map/'+pref);}else{selection.mapId=el.value;render();}}
   if(!cloud.locked()&&el.hasAttribute('data-check')){
     toggleList(state.checks,el.dataset.check);save();
     main.querySelector('#check-progress').textContent=checkProgress();
@@ -723,8 +742,8 @@ async function getJSON(name) {
 async function start() {
   main.innerHTML='<p class="wrap loading" role="status">여행 데이터를 불러오는 중입니다.</p>';
   try {
-    [data,paths,prefectureNames]=await Promise.all([
-      getJSON('data/trips.json'),getJSON('maps/prefectures.json'),getJSON('data/areas/prefectures.json')
+    [data,prefectureNames]=await Promise.all([
+      getJSON('data/trips.json'),getJSON('data/areas/prefectures.json')
     ]);
     destinations=data.destinations;
     byId=new Map([...destinations,...data.cities].map(d=>[d.id,d]));
@@ -737,9 +756,12 @@ async function start() {
   window.addEventListener('hashchange',routeChanged);
   routeChanged();
   void cloud.init();
+  setupPwa();
+  fitMobileViewport();
   if(!storageAvailable) announce('브라우저 저장 데이터를 불러올 수 없습니다.');
 }
 main.addEventListener('click',event=>{
   if(event.target.closest('[data-retry-start]'))void start();
 });
+setupMapGestures(main,selection,render,clearMapTooltip);
 await start();

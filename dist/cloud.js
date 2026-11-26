@@ -10,7 +10,7 @@ async function getConfig() {
   const abort=new AbortController();
   const deadline=setTimeout(()=>abort.abort(),5000);
   try{
-    const response=await fetch('/__/firebase/init.json',{signal:abort.signal});
+    const response=await fetch('/__/firebase/init.json',{signal:abort.signal,cache:'no-store'});
     if(!response.ok)return null;
     const config=await response.json();
     return config.projectId&&config.apiKey&&config.authDomain ? config : null;
@@ -173,6 +173,7 @@ export async function startCloud(events) {
     }catch(error){tell(s,'error',explain(error));}
   }
   sdk.onAuthStateChanged(auth,user=>{void attach(user);},error=>events.account({mode:'error',error:explain(error)}));
+  if(!emulate)void sdk.getRedirectResult(auth,sdk.browserPopupRedirectResolver).catch(error=>events.error(explain(error)));
 
   function watchGroups(update,error){
     stopList();
@@ -393,7 +394,13 @@ export async function startCloud(events) {
   }
 
   return {
-    signIn:()=>sdk.signInWithPopup(auth,provider,sdk.browserPopupRedirectResolver),
+    signIn:async()=>{
+      try {return await sdk.signInWithPopup(auth,provider,sdk.browserPopupRedirectResolver);}
+      catch(error){
+        if(emulate||!['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(error.code))throw error;
+        return sdk.signInWithRedirect(auth,provider,sdk.browserPopupRedirectResolver);
+      }
+    },
     logout,savePersonal,importGuest,flush:()=>timeLimit(flush(),8000,'동기화가 끝나지 않았습니다. 인터넷 연결을 확인해 주세요.'),
     retry:async()=>{
       const retryUser=auth.currentUser;

@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8000 --directory dist",
-    "build": "node scripts/build-cloud.mjs && node scripts/check.mjs",
+    "build": "node scripts/build-cloud.mjs && node scripts/build-pwa.mjs && node scripts/check.mjs",
     "test": "node --test scripts/check.mjs",
     "test:rules": "firebase emulators:exec --only firestore --project demo-trip-2027 \"node --test scripts/firestore.test.mjs\"",
     "test:cloud": "node --test scripts/cloud-model.test.mjs",

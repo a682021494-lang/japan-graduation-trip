@@ -1,7 +1,7 @@
 export { initializeApp } from 'firebase/app';
 export {
   browserLocalPersistence, browserPopupRedirectResolver, connectAuthEmulator, deleteUser, GoogleAuthProvider, initializeAuth,
-  onAuthStateChanged, reauthenticateWithPopup, signInWithPopup, signOut
+  getRedirectResult, onAuthStateChanged, reauthenticateWithPopup, signInWithPopup, signInWithRedirect, signOut
 } from 'firebase/auth';
 export {
   collection, connectFirestoreEmulator, deleteDoc, doc, increment, getDocFromServer, getDocsFromServer,

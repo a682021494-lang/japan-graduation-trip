@@ -2,7 +2,10 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/japan-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#10233a">
 <meta name="description" content="2027년 겨울 일본 졸업여행. 전국 여행지 비교, 일정 편집과 예산 계산.">
 <title>JAPAN TRIP 2027 · 일본 졸업여행</title>
@@ -21,7 +24,10 @@
 <div class="head-tools"><a href="#saved" class="saved-link" aria-label="나의 여행 후보">♡ <span>나의 여행 후보</span> <b id="saved-count">0</b></a><div id="account"><a href="#groups" class="btn">친구들과 여행</a></div></div>
 </div></header>
 <main id="main" tabindex="-1"><p class="wrap loading">여행 정보를 불러오는 중입니다.</p></main>
-<footer><div class="wrap footer-inner"><a class="brand" href="#home">JAPAN TRIP <b>2027</b></a><span>2027년 1–2월 · 대중교통 자유여행 가이드</span><div class="footer-links"><a href="#groups">친구들과 여행</a><a href="#sources">정보 및 이미지 출처</a><a href="#privacy">개인정보 처리방침</a></div></div></footer>
+<footer><div class="wrap footer-inner"><a class="brand" href="#home">JAPAN TRIP <b>2027</b></a><span>2027년 1–2월 · 대중교통 자유여행 가이드</span><div class="footer-links"><a href="#groups">친구들과 여행</a><a href="#sources">정보 및 이미지 출처</a><a href="#privacy">개인정보 처리방침</a></div><details data-pwa-install><summary>홈 화면에 추가</summary><div class="stack"><p>Android에서는 브라우저 메뉴의 앱 설치 또는 홈 화면에 추가를 선택하세요. iPhone에서는 Safari 공유 메뉴에서 홈 화면에 추가를 선택하세요.</p><button type="button" class="btn" data-install-prompt hidden>앱 설치</button><small>이미 열어 본 공개 여행 정보는 오프라인에서 볼 수 있어요. 계정과 그룹 편집은 연결이 필요합니다.</small></div></details></div></footer>
+<nav class="mobile-nav" aria-label="하단 메뉴">
+<a href="#home"><span aria-hidden="true">⌂</span>홈</a><a href="#explore"><span aria-hidden="true">⌕</span>여행지</a><a href="#map"><span aria-hidden="true">◇</span>지도</a><a href="#plan"><span aria-hidden="true">▤</span>일정</a><a href="#budget"><span aria-hidden="true">₩</span>예산</a>
+</nav>
 <dialog id="dialog"><button id="close-dialog" class="icon" aria-label="닫기">×</button><div id="dialog-body"></div></dialog>
 <div id="status" role="status" aria-live="polite"></div>
 </body>

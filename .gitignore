@@ -2,3 +2,4 @@ node_modules/
 dist/cloud-sdk.js
 .firebase/
 *-debug.log
+dist/sw.js

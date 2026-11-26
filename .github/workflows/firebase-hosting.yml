@@ -37,12 +37,12 @@ jobs:
           TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: |
           npx firebase emulators:exec --only auth,firestore,hosting --project demo-trip-2027 \
-            'node --test scripts/firestore.test.mjs && npm run test:browser && node --test scripts/guest-browser.test.mjs && node scripts/image-smoke.mjs'
+            'node --test scripts/firestore.test.mjs && npm run test:browser && node --test scripts/guest-browser.test.mjs scripts/mobile-pwa.test.mjs && node scripts/image-smoke.mjs'
       - name: Test WebKit
         run: |
           npx playwright install --with-deps webkit
           npx firebase emulators:exec --only hosting --project demo-trip-2027 \
-            'TRIP_QA_ENGINE=webkit node --test scripts/guest-browser.test.mjs'
+            'TRIP_QA_ENGINE=webkit node --test scripts/guest-browser.test.mjs scripts/mobile-pwa.test.mjs'
       - name: Verify published rules before enabling extended groups
         id: rules
         env:
@@ -66,6 +66,8 @@ jobs:
       - name: Configure published group capabilities
         if: steps.rules.outputs.extended == 'true'
         run: sed -i 's/:false;/:true;/' dist/cloud-config.js
+      - name: Build public cache for the final deployment configuration
+        run: node scripts/build-pwa.mjs
       - name: Deploy Firebase Hosting
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JAPAN_GRADUATION_TRIP_2027 }}
@@ -117,6 +119,10 @@ jobs:
                cmp -s dist/cloud-ui.js "$RUNNER_TEMP/hosting-cloud-ui" &&
                curl --fail --silent --show-error --max-time 15 "$origin/cloud-config.js" -o "$RUNNER_TEMP/hosting-cloud-config" &&
                cmp -s dist/cloud-config.js "$RUNNER_TEMP/hosting-cloud-config" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/sw.js" -o "$RUNNER_TEMP/hosting-service-worker" &&
+               cmp -s dist/sw.js "$RUNNER_TEMP/hosting-service-worker" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/manifest.webmanifest" -o "$RUNNER_TEMP/hosting-manifest" &&
+               cmp -s dist/manifest.webmanifest "$RUNNER_TEMP/hosting-manifest" &&
                grep -iq '^cache-control:.*no-cache' "$RUNNER_TEMP/hosting-headers"; then
               exit 0
             fi

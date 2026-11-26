@@ -215,5 +215,5 @@ ${p?tourismLink(p.id):''}
     if(searchText.trim())load('index',updateSearch);
     updateSearch();
   }
-  return {mapPanel,explorePanel,recommendations,guideLink,change,input,coordinate,detail,curated,loadPlaces:()=>load('places')};
+  return {mapPanel,explorePanel,recommendations,guideLink,change,input,coordinate,selectedPlace:()=>{const {place,id}=current();return place?{place,id}:null;},detail,curated,loadPlaces:()=>load('places')};
 }
