@@ -264,7 +264,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
   async function run(work,label=''){
     if(!client||busy)return;
     busy=true;error='';
-    const controls=[...document.querySelectorAll('button[data-cloud-action]:enabled, form[data-cloud-form] button:enabled')];
+    const controls=[...document.querySelectorAll('button[data-cloud-action]:enabled, form[data-cloud-form] button:enabled, form[data-cloud-form="travel"] input:enabled')];
     for(const control of controls)control.disabled=true;
     main.setAttribute('aria-busy','true');
     try{

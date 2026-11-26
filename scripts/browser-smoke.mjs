@@ -185,8 +185,10 @@ export function reauthenticateWithPopup(user) {
     if(!legacy){
       await owner.getByRole('button',{name:'여행 기간 하루 늘리기'}).click();
       await mobile.getByRole('heading',{name:'4일차',exact:true}).waitFor();
+      await owner.locator('[data-group-duration] output').getByText('3박 4일',{exact:true}).waitFor();
       await owner.getByLabel('출국일',{exact:true}).fill('2027-02-06');
       await owner.getByLabel('출국일',{exact:true}).press('Tab');
+      await owner.waitForFunction(()=>document.querySelector('[data-cloud-form=travel] [name=returnDate]')?.value==='2027-02-09');
       await mobile.getByRole('heading',{name:'4일차 2027-02-09',exact:true}).waitFor();
     }else assert.equal(await owner.getByRole('heading',{name:'그룹 여행 기간'}).count(),0);
     await owner.locator('summary').getByText('일정 추가',{exact:true}).click();
