@@ -1,9 +1,9 @@
+import { emulate, extendedGroups } from './cloud-config.js';
 import { freshState, travelSettings, tripDays, dateAfter } from './logic.js';
 import { changedRecords, expenseEntries, inviteCode, makeInviteCode, overlayRecords, recordsFor, stateFor, validTripDate, TripError } from './cloud-model.js';
 
 const demoProject='demo-trip-2027';
-const isLocal=location.hostname==='localhost'||location.hostname==='127.0.0.1';
-const emulate=isLocal&&new URLSearchParams(location.search).get('emulator')==='1';
+
 
 async function getConfig() {
   if(emulate) return {projectId:demoProject,apiKey:'demo-api-key',authDomain:'localhost'};
@@ -149,7 +149,7 @@ export async function startCloud(events) {
     session=s;
     tell(s,'loading');
     try{
-      let profile=await getDocFromServer(profileRef(s.uid));
+      let profile=await timeLimit(getDocFromServer(profileRef(s.uid)),8000,'계정 정보를 불러오지 못했습니다. 다시 시도해 주세요.');
       if(cycle!==revision)return;
       if(!profile.exists()){
         await runTransaction(db,async tx=>{
@@ -161,12 +161,15 @@ export async function startCloud(events) {
       if(cycle!==revision)return;
       s.profile=profile.data();
       if(s.profile.deleting){tell(s,'deleting');return;}
-      s.stop=onSnapshot(coll('users',s.uid,'items'),{includeMetadataChanges:true},snapshot=>{
+      const readyTimer=setTimeout(()=>tell(s,'error','개인 데이터를 불러오지 못했습니다. 연결을 확인해 주세요.'),10000);
+      const unsubscribe=onSnapshot(coll('users',s.uid,'items'),{includeMetadataChanges:true},snapshot=>{
         if(snapshot.metadata.hasPendingWrites||(!s.ready&&snapshot.metadata.fromCache))return;
+        clearTimeout(readyTimer);
         s.confirmed=asMap(snapshot);
         if(!s.ready){s.ready=true;tell(s,'ready');}
         apply(s);
-      },error=>tell(s,'error',explain(error)));
+      },error=>{clearTimeout(readyTimer);tell(s,'error',explain(error));});
+      s.stop=()=>{clearTimeout(readyTimer);unsubscribe();};
     }catch(error){tell(s,'error',explain(error));}
   }
   sdk.onAuthStateChanged(auth,user=>{void attach(user);},error=>events.account({mode:'error',error:explain(error)}));
@@ -175,7 +178,7 @@ export async function startCloud(events) {
     stopList();
     const {uid}=current();
     let generation=0;
-    stopList=onSnapshot(coll('users',uid,'memberships'),async snapshot=>{
+    const unsubscribe=onSnapshot(coll('users',uid,'memberships'),async snapshot=>{
       const tick=++generation;
       try{
         const result=await Promise.allSettled(snapshot.docs.map(async idx=>{
@@ -187,7 +190,9 @@ export async function startCloud(events) {
         if(result.some(row=>row.status==='rejected'))error(new TripError('일부 그룹을 불러오지 못했습니다.'));
       }catch(err){if(tick===generation)error(err);}
     },error);
-    return ()=>{generation++;stopList();stopList=()=>{};};
+    const stop=()=>{generation++;unsubscribe();if(stopList===stop)stopList=()=>{};};
+    stopList=stop;
+    return stop;
   }
 
   function watchGroup(gid,update,error){
@@ -196,16 +201,22 @@ export async function startCloud(events) {
     let group;
     const parts={};
     const names=['members','candidates','votes','schedule','budget','expenses','dates','checklist','opinions','places'];
-    const emit=()=>{if(group&&names.every(n=>parts[n]))update({group,...parts});};
-    const guard=err=>error(err);
+    const emit=()=>{
+      if(!stopped&&group&&names.every(n=>parts[n])){
+        clearTimeout(readyTimer);update({group,...parts});
+      }
+    };
+    let stopped=false;
+    const readyTimer=setTimeout(()=>guard(new TripError('그룹 데이터를 불러오지 못했습니다. 연결을 확인해 주세요.')),10000);
+    const guard=err=>{clearTimeout(readyTimer);if(!stopped)error(err);};
     const stops=[onSnapshot(groupRef(gid),ss=>{
-      if(!ss.exists()){error(new TripError('여행 그룹을 찾을 수 없습니다.'));return;}
+      if(!ss.exists()){guard(new TripError('여행 그룹을 찾을 수 없습니다.'));return;}
       group=ss.data();emit();
     },guard)];
     for(const name of names){
       stops.push(onSnapshot(coll('groups',gid,name),ss=>{parts[name]=asObject(ss);emit();},guard));
     }
-    const stop=()=>stops.splice(0).forEach(fn=>fn());
+    const stop=()=>{stopped=true;clearTimeout(readyTimer);stops.splice(0).forEach(fn=>fn());if(stopGroup===stop)stopGroup=()=>{};};
     stopGroup=stop;
     return stop;
   }
@@ -215,7 +226,7 @@ export async function startCloud(events) {
     check(name,'그룹 이름을 입력해 주세요.');
     const target=doc(coll('groups')),gid=target.id,stamp=serverTimestamp();
     const batch=writeBatch(db);
-    batch.set(target,{name,inviteCode:code,ownerUid:s.uid,memberCount:1,closing:false,travelDays:3,departure:'',createdAt:stamp});
+    batch.set(target,{name,inviteCode:code,ownerUid:s.uid,memberCount:1,closing:false,...(extendedGroups?{travelDays:3,departure:''}:{}),createdAt:stamp});
     batch.set(inviteRef(code),{groupId:gid});
     batch.set(memberRef(gid,s.uid),{nickname:s.profile.nickname,role:'member',joinCode:code,joinedAt:stamp});
     batch.set(indexRef(s.uid,gid),{joinedAt:stamp});
@@ -384,7 +395,13 @@ export async function startCloud(events) {
   return {
     signIn:()=>sdk.signInWithPopup(auth,provider,sdk.browserPopupRedirectResolver),
     logout,savePersonal,importGuest,flush:()=>timeLimit(flush(),8000,'동기화가 끝나지 않았습니다. 인터넷 연결을 확인해 주세요.'),
-    retry:()=>attach(auth.currentUser),
+    retry:async()=>{
+      const retryUser=auth.currentUser;
+      if(retryUser&&session?.uid===retryUser.uid&&(session.pending.size||session.writing)){
+        await timeLimit(flush(session),8000,'저장 대기 중인 항목이 있습니다. 인터넷 연결을 확인해 주세요.');
+      }
+      if(auth.currentUser===retryUser)await attach(retryUser);
+    },
     watchGroups,watchGroup,createGroup,joinGroup,rotateInvite,vote,setSchedule,expense,leaveGroup,closeGroup,nickname,eraseAccount,
     rename:(gid,value)=>{
       const name=field(value,70);
@@ -442,7 +459,9 @@ export async function startCloud(events) {
     setBudget:(gid,values,expected)=>{
       const costs=Object.fromEntries(['total','nightly','foodDaily','transitDaily'].map(key=>[key,Number(values[key]||0)]));
       check(Object.values(costs).every(value=>Number.isSafeInteger(value)&&value>=0&&value<=1e8),'각 예산은 0원~1억 원 사이로 입력해 주세요.');
-      return revise(gid,'budget','shared',{...costs,memo:field(values.memo,400)},expected);
+      const data=extendedGroups?costs:{total:costs.total};
+      if(!extendedGroups)check(data.total>=1,'그룹 예산을 1원 이상 입력해 주세요.');
+      return revise(gid,'budget','shared',{...data,memo:field(values.memo,400)},expected);
     }
   };
 }

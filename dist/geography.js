@@ -8,21 +8,23 @@ const noValue='미확인';
 const areaSource='https://www.e-stat.go.jp/municipalities/cities';
 const officeSource='https://github.com/code4fukui/localgovjp';
 
-export function setupGeography({main,esc,select,page,link,getData,getPrefectureNames,refresh,detailHref,winterPlaceNotice}){
+export function setupGeography({main,esc,select,page,link,fetchJSON,getData,getPrefectureNames,refresh,detailHref,winterPlaceNotice}){
   const entries=new Map(), pending=new Map(), failures=new Set();
   let searchText='';
   let placeTypes=[];
   function load(name,done=refresh){
     if(entries.has(name)||pending.has(name)||failures.has(name))return;
-    pending.set(name,fetch(folder+name+'.json').then(response=>{
-      if(!response.ok)throw Error(name);
-      return response.json();
-    }).then(value=>entries.set(name,value)).catch(()=>failures.add(name)).finally(()=>{pending.delete(name);done();}));
+    pending.set(name,fetchJSON(folder+name+'.json').then(value=>entries.set(name,value)).catch(()=>failures.add(name)).finally(()=>{pending.delete(name);done();}));
   }
   function metadata(){
     for(const name of ['guides','places','tourism'])load(name);
   }
   const db=()=>entries.get('places')||{};
+  const retryButton=name=>`<button type="button" class="btn" data-retry-area="${name}">다시 불러오기</button>`;
+  main.addEventListener('click',event=>{
+    const name=event.target.closest('[data-retry-area]')?.dataset.retryArea;
+    if(failures.delete(name)){load(name);refresh();}
+  });
   const guideCodes=()=>entries.get('guides')||{};
   const placeHref=id=>'#place/'+id;
   function href(pref,code='',id=''){
@@ -52,8 +54,9 @@ export function setupGeography({main,esc,select,page,link,getData,getPrefectureN
       .slice(0,8).map(p=>[href(p.id),p.region+' · '+p.name]);
     const places=Object.entries(db()).filter(([,p])=>matches([p.name,p.ja,p.local,p.localJa]))
       .slice(0,10).map(([id,p])=>[placeHref(id),p.name+' · '+p.ja]);
+    const documented=new Set(Object.values(db()).flatMap(p=>(p.links||[]).map(([guide,index])=>guide+'/'+index)));
     const legacy=[...d.destinations,...d.cities].flatMap(g=>g.attractions.map((name,i)=>[g,i,name]))
-      .filter(([, ,name])=>matches([name])).slice(0,8)
+      .filter(([guide,i,name])=>matches([name])&&!documented.has(guide.id+'/'+i)).slice(0,8)
       .map(([g,i,name])=>[placeHref(g.id+'/'+i),name+' · '+g.name]);
     const index=entries.get('index');
     const municipalities=index?index.filter(r=>matches(r.slice(1))).slice(0,18).map(r=>{
@@ -64,8 +67,9 @@ export function setupGeography({main,esc,select,page,link,getData,getPrefectureN
     const guides=[...d.destinations,...d.cities].filter(g=>matches([g.name])).slice(0,10)
       .map(g=>[detailHref(g.id),g.region+' · '+g.name]);
     const results=[...regions,...prefectures,...places,...guides,...legacy,...municipalities];
-    return results.length?`<ul>${results.map(([url,label])=>`<li><a href="${url}">${esc(label)}</a></li>`).join('')}</ul>`
-      :failures.has('index')?'<p>전국 검색 목록을 불러오지 못했습니다.</p>':index?'<p>검색 결과가 없습니다.</p>':'<p>전국 검색 목록을 불러오는 중입니다.</p>';
+    const retry=failures.has('index')?'<p>전국 검색 목록을 불러오지 못했습니다.</p>'+retryButton('index'):'';
+    return results.length?`<ul>${results.map(([url,label])=>`<li><a href="${url}">${esc(label)}</a></li>`).join('')}</ul>`+retry
+      :retry?retry:index?'<p>검색 결과가 없습니다.</p>':'<p>전국 검색 목록을 불러오는 중입니다.</p>';
   }
   function updateSearch(){
     const node=main.querySelector('[data-area-results]');
@@ -125,7 +129,7 @@ export function setupGeography({main,esc,select,page,link,getData,getPrefectureN
       ${visibleSites.length?select('관광지 위치','place',[['','선택하세요'],...visibleSites.map(([id,s])=>[id,s.name])],place?id:''):''}
       </form>
       ${trail.length?`<p class="notice" aria-label="탐색 경로">${trail.map(esc).join(' → ')}</p>`:''}
-      ${p&&!rows.length?`<p>${failures.has(pref)?'행정구역 데이터를 불러오지 못했습니다.':'행정구역을 불러오는 중입니다.'}</p>`:''}
+      ${p&&!rows.length?`<p>${failures.has(pref)?'행정구역 데이터를 불러오지 못했습니다.':'행정구역을 불러오는 중입니다.'}</p>${failures.has(pref)?retryButton(pref):''}`:''}
       ${row?.[6]?`<small class="links">지도 점은 청사 위치를 기준으로 합니다. ${link('청사 지도',maps(row[6].slice().reverse().join(',')))} ${https(row[7])?link('지자체 홈페이지',row[7]):''}</small>`:''}
       ${visibleSites.length?`<h3>출처가 확인된 관광지</h3><div class="row">${visibleSites.map(([id,s])=>`<a class="btn" href="${placeHref(id)}">${esc(s.name)}</a>`).join('')}</div>`:''}
       ${p?`<h3>등록된 여행 가이드</h3>${guides.length?`<div class="row">${guides.map(g=>`<a class="btn" href="${detailHref(g.id)}">${esc(g.name)}</a>`).join('')}</div>`:'<small>현재 선택에 연결된 가이드는 아직 없습니다.</small>'}`:''}
@@ -151,14 +155,14 @@ ${p?tourismLink(p.id):''}
       ${https(row?.[7])?`<span class="links">${link('지자체 홈페이지',row[7])}</span>`:''} ${tourismLink(d.pref)}`;
   }
   function curated(id,g,n){
-    return db()[id]||Object.values(db()).find(p=>p.links?.some(([guide,i])=>guide===g&&i===n));
+    return Object.hasOwn(db(),id)?db()[id]:Object.values(db()).find(p=>p.links?.some(([guide,i])=>guide===g&&i===n));
   }
   function detail(id,g,n,controls,photo){
     metadata();
     const d=getData(), guide=[...d.destinations,...d.cities].find(x=>x.id===g);
     const item=curated(id,g,n);
     const title=item?.name||guide?.attractions[n];
-    if(!title)return page('PLACE','관광지','관광 정보를 확인하세요.',`<p class="notice">${pending.has('places')?'관광 정보를 불러오는 중입니다.':'등록된 관광지를 찾지 못했습니다.'}</p>`);
+    if(!title)return page('PLACE','관광지','관광 정보를 확인하세요.',`<p class="notice">${pending.has('places')?'관광 정보를 불러오는 중입니다.':failures.has('places')?'관광 정보를 불러오지 못했습니다.':'등록된 관광지를 찾지 못했습니다.'}</p>${failures.has('places')?retryButton('places'):''}`);
     const info=d.attractionInfo[title]||{};
     const credits=item?.source||d.official[title];
     const itemId=item?Object.keys(db()).find(key=>db()[key]===item):id;

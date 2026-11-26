@@ -1,3 +1,4 @@
+import { extendedGroups } from './cloud-config.js';
 import { calculate, formatMoney, freshState, durationControl, durationLabel, maxTripDays, travelDates, dateAfter, travelSettings, tripDays } from './logic.js';
 import { expenseEntries, inviteCode, settlement, splitShare, TripError } from './cloud-model.js';
 
@@ -79,7 +80,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
     };
     stop=route==='groups'
       ?client.watchGroups(rows=>{if(subscription===desired){groups=rows;updateView();}},failed)
-      :client.watchGroup(arg,data=>{if(subscription===desired){shared=data;updateView();}},failed);
+      :client.watchGroup(arg,data=>{if(subscription===desired){if(!shared)error='';shared=data;updateView();}},failed);
   }
   function routeChanged(route='',arg='') {
     if(view.route!==route||view.arg!==arg) {
@@ -127,7 +128,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
   const inputSelect=(name,label,options,current='')=>`<label>${label}<select name="${name}" required>${options.map(([v,l])=>`<option value="${esc(v)}"${String(v)===String(current)?' selected':''}>${esc(l)}</option>`).join('')}</select></label>`;
   function groupTravel() {
     const {group,schedule}=shared;
-    return {days:tripDays(group.travelDays,Math.max(3,...Object.values(schedule).map(item=>item.day))),
+    return {days:tripDays(group.travelDays,Math.max(extendedGroups?3:4,...Object.values(schedule).map(item=>item.day))),
       savedDays:group.travelDays,departure:group.departure||''};
   }
   function scheduleForm(id='',value={day:1,time:'09:00',title:'',memo:'',revision:0}){
@@ -139,7 +140,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
   function groupPage(arg){
     if(!account.user||!['ready','deleting'].includes(account.mode))return page('GROUP','여행 그룹','친구들과 함께 계획을 작성하세요.',gate());
     if(!/^[a-zA-Z0-9]{20}$/.test(arg))return page('GROUP','여행 그룹','그룹 주소를 확인해 주세요.','<a class="btn" href="#groups">내 여행 그룹</a>');
-    if(!shared)return page('GROUP','여행 그룹','참여한 그룹의 계획을 불러옵니다.',`<div class="panel stack">${error?message():'<p>그룹을 불러오고 있습니다.</p>'}<a class="btn" href="#groups">내 여행 그룹</a></div>`);
+    if(!shared)return page('GROUP','여행 그룹','참여한 그룹의 계획을 불러옵니다.',`<div class="panel stack">${error?message()+action('retry-group','다시 불러오기'):'<p>그룹을 불러오고 있습니다.</p>'}<a class="btn" href="#groups">내 여행 그룹</a></div>`);
     const {group,members,candidates,votes,schedule,budget,expenses,dates,checklist,opinions,places}=shared;
     const uid=account.user.uid;
     const owner=group.ownerUid===uid,admin=owner||members[uid]?.role==='admin';
@@ -166,7 +167,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
       }).join('');
       return `<li><a href="#trip/${esc(id)}">${esc(names.get(id)||id)}</a><span class="pill">${count}표</span><span class="row">${writable?action('vote-destination',personal.destination===id?'투표 취소':'투표',`data-item="${esc(id)}" aria-pressed="${personal.destination===id}"`):''}${reactions}${writable&&admin?action('remove-candidate','후보 삭제',`data-item="${esc(id)}"`):''}</span></li>`;
     }).join('');
-    const durationPoll=[...new Set(ballots.map(v=>v.days).filter(Boolean))].sort((a,b)=>a-b).map(days=>`<li><b>${duration(days)}</b><span class="pill">${ballots.filter(v=>v.days===days).length}표</span>
+    const durationPoll=(extendedGroups?[...new Set(ballots.map(v=>v.days).filter(Boolean))].sort((a,b)=>a-b):[3,4]).map(days=>`<li><b>${duration(days)}</b><span class="pill">${ballots.filter(v=>v.days===days).length}표</span>
       ${writable?action('vote-days',personal.days===days?'투표 취소':'투표',`data-item="${days}" aria-pressed="${personal.days===days}"`):''}</li>`).join('');
     const dateRows=Object.keys(dates).sort().map(date=>{
       const chosen=personal.date===date;
@@ -216,19 +217,19 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
       ${group.closing?'<p class="notice">소유자가 그룹을 정리 중입니다.</p>':''}
       ${writable&&admin?`<details class="cloud-edit"><summary>그룹 이름 변경</summary>${form('rename',textInput('name','새 그룹 이름',group.name,70)+submit('이름 저장'))}</details>`:''}
       ${writable?`<p class="notice">초대 코드 <code>${esc(group.inviteCode)}</code> · 링크나 코드를 받은 로그인 사용자가 그룹에 참여할 수 있습니다.</p>`:''}
-      <section class="panel stack"><h2>그룹 여행 기간</h2>${writable&&admin?form('travel',durationControl(trip.days,esc,'data-group-duration')+`<div class="form-grid">${travelDates(trip,esc)}</div>`):`<p>${duration(trip.days)} ${trip.departure?' · '+esc(trip.departure)+' ~ '+dateAfter(trip.departure,trip.days-1):''}</p>`}</section>
+      ${extendedGroups?`<section class="panel stack"><h2>그룹 여행 기간</h2>${writable&&admin?form('travel',durationControl(trip.days,esc,'data-group-duration')+`<div class="form-grid">${travelDates(trip,esc)}</div>`):`<p>${duration(trip.days)} ${trip.departure?' · '+esc(trip.departure)+' ~ '+dateAfter(trip.departure,trip.days-1):''}</p>`}</section>`:''}
       <div class="two"><section class="panel stack"><h2>여행지 후보</h2><p class="muted">가장 선호하는 후보 한 곳에 투표하고, 각 후보에 찬반을 표시할 수 있습니다.</p>${writable&&options.length?form('candidate',inputSelect('destination','여행지',options)+submit('후보 추가')):''}
         ${candidatesList?`<ul class="cloud-list">${candidatesList}</ul>`:'<p>아직 후보가 없습니다.</p>'}</section>
-      <section class="panel stack"><h2>여행 기간 투표</h2>${writable?form('vote-days',numberInput('days','희망 여행 일수',personal.days||trip.days,1,maxTripDays)+submit('기간 투표')):''}<ul class="cloud-list">${durationPoll}</ul><p class="muted">내 선택 · ${esc(names.get(personal.destination)||'여행지 미선택')} · ${duration(personal.days)}</p></section></div>
+      <section class="panel stack"><h2>여행 기간 투표</h2>${writable&&extendedGroups?form('vote-days',numberInput('days','희망 여행 일수',personal.days||trip.days,1,maxTripDays)+submit('기간 투표')):''}<ul class="cloud-list">${durationPoll}</ul><p class="muted">내 선택 · ${esc(names.get(personal.destination)||'여행지 미선택')} · ${duration(personal.days)}</p></section></div>
       <div class="two"><section class="panel stack"><h2>여행 날짜 투표</h2><p class="muted">출발 날짜 후보 중 한 곳에 투표할 수 있습니다.</p>
         ${writable?form('date','<label>출발 날짜<input type="date" name="date" required></label>'+submit('날짜 후보 추가')):''}
         ${dateRows?`<ul class="cloud-list">${dateRows}</ul>`:'<p>등록된 날짜 후보가 없습니다.</p>'}</section>
       <section class="panel stack"><h2>공동 준비 체크리스트</h2>
         ${writable?form('task',textInput('title','준비 항목','',100)+submit('준비 항목 추가')):''}
         ${taskRows?`<ul class="cloud-list">${taskRows}</ul>`:'<p>등록된 준비 항목이 없습니다.</p>'}</section></div>
-      <div class="two"><section class="panel stack"><h2>공동 일정</h2>${writable&&admin?form('group-template',inputSelect('template','공동 일정 템플릿',[['','선택하세요'],...groupTemplates])+submit('템플릿 추가'),'','row'):''}<datalist id="group-attractions">${attractionOptions}</datalist>${itinerary}${archived?`<p class="notice">기간 밖 일정 ${archived}개가 보관 중입니다. 기간을 늘리면 다시 표시됩니다.</p>`:''}${writable?`<details class="cloud-edit"><summary>일정 추가</summary>${scheduleForm()}</details>`:''}</section>
+      <div class="two"><section class="panel stack"><h2>공동 일정</h2>${writable&&admin&&extendedGroups?form('group-template',inputSelect('template','공동 일정 템플릿',[['','선택하세요'],...groupTemplates])+submit('템플릿 추가'),'','row'):''}<datalist id="group-attractions">${attractionOptions}</datalist>${itinerary}${archived?`<p class="notice">기간 밖 일정 ${archived}개가 보관 중입니다. 기간을 늘리면 다시 표시됩니다.</p>`:''}${writable?`<details class="cloud-edit"><summary>일정 추가</summary>${scheduleForm()}</details>`:''}</section>
       <section class="panel stack"><h2>공유 예산</h2>${budgetValue?`<p class="total">${money(budgetTotal)}</p><p>${esc(budgetValue.memo)}</p><h3>개인별 예상 부담금</h3><p class="muted">그룹 예산을 현재 인원으로 균등 분담한 예상 금액입니다.</p><ul class="cloud-list">${budgetShares}</ul>`:'<p>아직 공유 예산이 없습니다.</p>'}
-      ${writable?`<details class="cloud-edit"><summary>예산 수정</summary>${form('budget',numberInput('total','그룹 고정비 (원)',budgetValue?.total||0,0,1e8)+numberInput('nightly','그룹 1박 숙박비 (원)',budgetValue?.nightly||0,0,1e8)+numberInput('foodDaily','그룹 1일 식비 (원)',budgetValue?.foodDaily||0,0,1e8)+numberInput('transitDaily','그룹 1일 교통비 (원)',budgetValue?.transitDaily||0,0,1e8)+textInput('memo','예산 메모',budgetValue?.memo||'',400,false)+
+      ${writable?`<details class="cloud-edit"><summary>예산 수정</summary>${form('budget',(extendedGroups?numberInput('total','그룹 고정비 (원)',budgetValue?.total||0,0,1e8)+numberInput('nightly','그룹 1박 숙박비 (원)',budgetValue?.nightly||0,0,1e8)+numberInput('foodDaily','그룹 1일 식비 (원)',budgetValue?.foodDaily||0,0,1e8)+numberInput('transitDaily','그룹 1일 교통비 (원)',budgetValue?.transitDaily||0,0,1e8):numberInput('total','그룹 전체 예산 (원)',budgetValue?.total||'',1,1e8))+textInput('memo','예산 메모',budgetValue?.memo||'',400,false)+
       `<div class="row">${submit('그룹 예산 저장')}${action('personal-budget','내 예산 금액 채우기')}</div>`,`data-revision="${budgetValue?.revision||0}"`)}</details>`:''}</section></div>
       <div class="two"><section class="panel stack"><h2>공동 경비 정산</h2><p>현재 구성원이 사용한 공동 경비를 균등 분담합니다.</p><p class="total">${money(result.total)}</p>
       ${writable?form('expense',textInput('title','내가 낸 경비 내역','',100)+numberInput('amount','금액 (원)','',1,1e8)+submit('공동 경비 추가')):''}
@@ -337,7 +338,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
     const name=control.dataset.cloudAction,gid=view.arg,id=control.dataset.item;
     const confirmation=message=>confirm(message);
     const commands={
-      signin:()=>client.signIn(),logout:()=>client.logout(),retry:()=>client.retry(),flush:()=>client.flush(),
+      signin:()=>client.signIn(),logout:()=>client.logout(),retry:()=>client.retry(),'retry-group':()=>{error='';clearSubscription();subscribe();},flush:()=>client.flush(),
       invite:()=>{const url=new URL(location.href);url.hash='join/'+shared.group.inviteCode;return copy(url.href);},
       code:()=>copy(shared.group.inviteCode),
       rotate:()=>confirmation('기존 초대 링크와 코드가 무효화됩니다. 새 코드를 발급할까요?')&&client.rotateInvite(gid),

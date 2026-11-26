@@ -56,7 +56,7 @@ const personalDuration = () => durationControl(state.budget.days,esc,'data-perso
 const budgetOptions = [['','모든 예산'],['0-400000','40만 원 이하'],['400000-600000','40~60만 원'],['600000-800000','60~80만 원'],['800000-1000000','80~100만 원'],['1000000-','100만 원 이상'],['custom','직접 입력']];
 const typeOptions = [['','모든 유형'],...types.map(t=>[t,t])];
 const exploreTypes=[...types.filter(type=>type!=='액티비티'),'체험','역사','친구들과 여행하기 좋은 곳'];
-const geo=setupGeography({main,esc,select,page,link,getData:()=>data,getPrefectureNames:()=>prefectureNames,refresh:()=>{
+const geo=setupGeography({main,esc,select,page,link,fetchJSON:getJSON,getData:()=>data,getPrefectureNames:()=>prefectureNames,refresh:()=>{
   if(location.hash.startsWith('#explore')||location.hash.startsWith('#map')||location.hash.startsWith('#trip/')||location.hash.startsWith('#place/')||location.hash==='#saved'){
     const search=document.activeElement?.matches('[data-area-search]');
     const caret=search?document.activeElement.selectionStart:null;
@@ -368,7 +368,7 @@ function planPage() {
     <div class="actions noprint">${btn('일정 복사','copy-plan','','primary')}${btn('인쇄','print')}${btn('현재 일정 비우기','reset-plan')}</div></aside></section>
     <datalist id="plan-places">${d.attractions.map(a=>option(a,a,'')).join('')}</datalist></div>`);
 }
-const moneyInput=(name,label,value,attrs='')=>`<label>${label}<input name="${name}" type="number" min="0" step="1" inputmode="decimal" value="${Number(value)||0}" ${attrs}></label>`;
+const moneyInput=(name,label,value,attrs='')=>`<label>${label}<input name="${name}" type="number" min="${['rooms','people'].includes(name)?1:0}" step="1" inputmode="numeric" value="${Number(value)||0}" ${attrs}></label>`;
 function budgetPage() {
   const b=state.budget;
   return page('BUDGET','예산 계산기','친구 인원과 실제 견적을 입력하면 숙박비를 나누고 전체 비용을 계산합니다.',`<div class="two">
@@ -716,22 +716,30 @@ main.addEventListener('change',async e=>{
   }
 });
 async function getJSON(name) {
-  const response=await fetch(name);
+  const response=await fetch(name,{signal:AbortSignal.timeout(10000)});
   if(!response.ok) throw new Error(name);
   return response.json();
 }
-try {
-  [data,paths,prefectureNames]=await Promise.all([
-    getJSON('data/trips.json'),getJSON('maps/prefectures.json'),getJSON('data/areas/prefectures.json')
-  ]);
-  destinations=data.destinations;
-  byId=new Map([...destinations,...data.cities].map(d=>[d.id,d]));
-  prefById=new Map(data.prefectures.map(p=>[p.id,p]));
-  if(!byId.has(selection.planId))selection.planId=state.budget.id=budgetDefaults.id;
+async function start() {
+  main.innerHTML='<p class="wrap loading" role="status">여행 데이터를 불러오는 중입니다.</p>';
+  try {
+    [data,paths,prefectureNames]=await Promise.all([
+      getJSON('data/trips.json'),getJSON('maps/prefectures.json'),getJSON('data/areas/prefectures.json')
+    ]);
+    destinations=data.destinations;
+    byId=new Map([...destinations,...data.cities].map(d=>[d.id,d]));
+    prefById=new Map(data.prefectures.map(p=>[p.id,p]));
+    if(!byId.has(selection.planId))selection.planId=state.budget.id=budgetDefaults.id;
+  }catch{
+    main.innerHTML='<section class="wrap loading stack"><p role="alert">여행 데이터를 불러오지 못했습니다. 연결을 확인해 주세요.</p><button type="button" class="btn" data-retry-start>다시 불러오기</button></section>';
+    return;
+  }
   window.addEventListener('hashchange',routeChanged);
   routeChanged();
   void cloud.init();
   if(!storageAvailable) announce('브라우저 저장 데이터를 불러올 수 없습니다.');
-} catch {
-  main.innerHTML='<p class="wrap loading">여행 데이터를 불러오지 못했습니다. README의 로컬 서버 실행 방법을 확인한 뒤 다시 열어 주세요.</p>';
 }
+main.addEventListener('click',event=>{
+  if(event.target.closest('[data-retry-start]'))void start();
+});
+await start();

@@ -21,16 +21,34 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
-      - run: npm ci && npm run build
-      - name: Test Firestore rules and synchronized travel editing
+      - run: npm ci && npm run build && npm run test:cloud && node scripts/render-check.mjs
+      - name: Install WebKit for browser QA
+        run: npx playwright install --with-deps webkit
+      - name: Test Firestore rules, browsers and synchronized travel editing
         env:
           TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
-        run: npx firebase emulators:exec --only auth,firestore,hosting --project demo-trip-2027 "node --test scripts/firestore.test.mjs && npm run test:browser"
-      - name: Deploy Firestore rules and Firebase Hosting
+        run: |
+          npx firebase emulators:exec --only auth,firestore,hosting --project demo-trip-2027 \
+            'node --test scripts/firestore.test.mjs && npm run test:browser && node --test scripts/guest-browser.test.mjs && TRIP_QA_ENGINE=webkit node --test scripts/guest-browser.test.mjs && node scripts/image-smoke.mjs'
+      - name: Test group compatibility with deployed rules
+        if: vars.FIREBASE_EXTENDED_GROUPS != 'true'
+        env:
+          TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          git show 424c180:firestore.rules > "$RUNNER_TEMP/production-firestore.rules"
+          cp firestore.rules "$RUNNER_TEMP/candidate-firestore.rules"
+          trap 'cp "$RUNNER_TEMP/candidate-firestore.rules" firestore.rules' EXIT
+          cp "$RUNNER_TEMP/production-firestore.rules" firestore.rules
+          TRIP_QA_LEGACY=1 npx firebase emulators:exec --only auth,firestore,hosting --project demo-trip-2027 "npm run test:browser"
+      - name: Configure published group capabilities
+        if: vars.FIREBASE_EXTENDED_GROUPS == 'true'
+        run: sed -i 's/:false;/:true;/' dist/cloud-config.js
+      - name: Deploy Firebase Hosting
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JAPAN_GRADUATION_TRIP_2027 }}
         shell: bash
@@ -45,7 +63,7 @@ jobs:
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$credentials"
           unset FIREBASE_SERVICE_ACCOUNT
           GOOGLE_APPLICATION_CREDENTIALS="$credentials" ./node_modules/.bin/firebase deploy \
-            --only firestore:rules,hosting --project japan-graduation-trip-2027 --non-interactive
+            --only hosting --project japan-graduation-trip-2027 --non-interactive
       - name: Verify public entry point and travel data
         shell: bash
         run: |
@@ -75,6 +93,8 @@ jobs:
                cmp -s dist/logic.js "$RUNNER_TEMP/hosting-logic" &&
                curl --fail --silent --show-error --max-time 15 "$origin/cloud-ui.js" -o "$RUNNER_TEMP/hosting-cloud-ui" &&
                cmp -s dist/cloud-ui.js "$RUNNER_TEMP/hosting-cloud-ui" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/cloud-config.js" -o "$RUNNER_TEMP/hosting-cloud-config" &&
+               cmp -s dist/cloud-config.js "$RUNNER_TEMP/hosting-cloud-config" &&
                grep -iq '^cache-control:.*no-cache' "$RUNNER_TEMP/hosting-headers"; then
               exit 0
             fi

@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
-const entry='http://127.0.0.1:15500/?emulator=1';
+const legacy=process.env.TRIP_QA_LEGACY==='1';
+const entry='http://127.0.0.1:15500/?emulator=1'+(legacy?'&legacy=1':'');
 const suffix=Date.now().toString(36);
 const users=['owner','friend'].map(key=>({sub:key+'-'+suffix,name:key==='owner'?'여행 테스트 소유자':'여행 테스트 친구',email:key+'-'+suffix+'@example.com',email_verified:true}));
 // The official Auth emulator accepts mock Google credentials. This adapter is served only by the browser test.
@@ -98,6 +99,26 @@ export function reauthenticateWithPopup(user) {
     await alternate.getByRole('link',{name:'장기 일정 동기화 ↗'}).waitFor();
     assert.equal(await alternate.getByLabel('여행 일수',{exact:true}).inputValue(),'8');
 
+    if(!legacy){
+      await go(owner,'saved','나의 여행 후보');
+      await owner.context().setOffline(true);
+      await owner.getByLabel('개인 메모').fill('오프라인에서 작성한 메모');
+      await go(owner,'settings','설정');
+      await owner.getByRole('button',{name:'동기화 재시도'}).click();
+      await owner.getByText(/동기화가 끝나지 않았습니다/).first().waitFor();
+      await owner.context().setOffline(false);
+      await owner.getByRole('button',{name:'동기화 재시도'}).click();
+      await owner.getByText('동기화를 마쳤습니다.').waitFor();
+      await go(alternate,'saved','나의 여행 후보');
+      await alternate.waitForFunction(()=>document.querySelector('[data-note="tokyo"]')?.value==='오프라인에서 작성한 메모');
+      await alternate.locator('#account summary').click();
+      await alternate.getByRole('button',{name:'로그아웃'}).click();
+      await alternate.getByRole('button',{name:'Google 로그인'}).first().waitFor();
+      await login(alternate,users[1]);
+      await go(alternate,'saved','나의 여행 후보');
+      assert.equal(await alternate.getByLabel('개인 메모').count(),0);
+    }
+
     await go(owner,'groups','친구들과 여행');
     await owner.getByLabel('그룹 이름').fill('겨울 졸업여행 '+suffix);
     await owner.getByRole('button',{name:'그룹 만들기'}).click();
@@ -118,9 +139,14 @@ export function reauthenticateWithPopup(user) {
     await owner.getByRole('button',{name:'후보 추가',exact:true}).click();
     const tokyo=mobile.getByRole('listitem').filter({has:mobile.getByRole('link',{name:'도쿄',exact:true})});
     await tokyo.getByRole('button',{name:'투표',exact:true}).click();
-    await mobile.getByLabel('희망 여행 일수').fill('6');
-    await mobile.getByRole('button',{name:'기간 투표',exact:true}).click();
-    await owner.getByRole('listitem').filter({hasText:'5박 6일'}).getByText('1표').waitFor();
+    const votedDuration=legacy?'3박 4일':'5박 6일';
+    const voteRow=page=>page.getByRole('listitem').filter({hasText:votedDuration});
+    if(legacy)await voteRow(mobile).getByRole('button',{name:'투표',exact:true}).click();
+    else{
+      await mobile.getByLabel('희망 여행 일수').fill('6');
+      await mobile.getByRole('button',{name:'기간 투표',exact:true}).click();
+    }
+    await voteRow(owner).getByText('1표').waitFor();
     await owner.getByRole('listitem').filter({has:owner.getByRole('link',{name:'도쿄',exact:true})}).getByText('1표').waitFor();
     await tokyo.getByRole('button',{name:'찬성 0',exact:true}).click();
     await owner.getByRole('button',{name:'찬성 1',exact:true}).waitFor();
@@ -156,11 +182,13 @@ export function reauthenticateWithPopup(user) {
 
 
 
-    await owner.getByRole('button',{name:'여행 기간 하루 늘리기'}).click();
-    await mobile.getByRole('heading',{name:'4일차',exact:true}).waitFor();
-    await owner.getByLabel('출국일',{exact:true}).fill('2027-02-06');
-    await owner.getByLabel('출국일',{exact:true}).press('Tab');
-    await mobile.getByRole('heading',{name:'4일차 2027-02-09',exact:true}).waitFor();
+    if(!legacy){
+      await owner.getByRole('button',{name:'여행 기간 하루 늘리기'}).click();
+      await mobile.getByRole('heading',{name:'4일차',exact:true}).waitFor();
+      await owner.getByLabel('출국일',{exact:true}).fill('2027-02-06');
+      await owner.getByLabel('출국일',{exact:true}).press('Tab');
+      await mobile.getByRole('heading',{name:'4일차 2027-02-09',exact:true}).waitFor();
+    }else assert.equal(await owner.getByRole('heading',{name:'그룹 여행 기간'}).count(),0);
     await owner.locator('summary').getByText('일정 추가',{exact:true}).click();
     await owner.getByLabel('일정 이름').fill('우에노 박물관');
     await owner.getByRole('button',{name:'일정 추가',exact:true}).click();
@@ -171,13 +199,15 @@ export function reauthenticateWithPopup(user) {
     await owner.getByText('1일차 · 09:00 · 도쿄역 산책').waitFor();
 
     await owner.getByText('예산 수정',{exact:true}).click();
-    await owner.getByLabel('그룹 고정비 (원)',{exact:true}).fill('500000');
-    await owner.getByLabel('그룹 1박 숙박비 (원)').fill('10000');
+    await owner.getByLabel(legacy?'그룹 전체 예산 (원)':'그룹 고정비 (원)',{exact:true}).fill('500000');
+    if(!legacy)await owner.getByLabel('그룹 1박 숙박비 (원)').fill('10000');
     await owner.getByRole('button',{name:'그룹 예산 저장'}).click();
-    await mobile.getByText('₩530,000',{exact:true}).waitFor();
-    assert.equal(await mobile.getByText('₩265,000',{exact:true}).count(),2);
-    await owner.getByRole('button',{name:'여행 기간 하루 늘리기'}).click();
-    await mobile.getByText('₩540,000',{exact:true}).waitFor();
+    await mobile.getByText(legacy?'₩500,000':'₩530,000',{exact:true}).waitFor();
+    assert.equal(await mobile.getByText(legacy?'₩250,000':'₩265,000',{exact:true}).count(),2);
+    if(!legacy){
+      await owner.getByRole('button',{name:'여행 기간 하루 늘리기'}).click();
+      await mobile.getByText('₩540,000',{exact:true}).waitFor();
+    }
     await mobile.getByLabel('내가 낸 경비 내역').fill('숙박비');
     await mobile.getByLabel('금액 (원)',{exact:true}).fill('20000');
     await mobile.getByRole('button',{name:'공동 경비 추가'}).click();
@@ -196,7 +226,8 @@ export function reauthenticateWithPopup(user) {
     await mobile.getByRole('button',{name:'회원 탈퇴 및 데이터 삭제'}).click();
     await mobile.getByRole('heading',{name:/우리의 첫 졸업여행/}).waitFor();
     await owner.getByRole('heading',{name:'구성원 1명'}).waitFor();
-    await owner.getByRole('listitem').filter({hasText:'5박 6일'}).waitFor({state:'hidden'});
+    if(legacy)await voteRow(owner).getByText('0표').waitFor();
+    else await voteRow(owner).waitFor({state:'hidden'});
     await owner.getByText('남겨진 의견이 없습니다.',{exact:true}).waitFor();
 
     await go(owner,'settings','설정');
