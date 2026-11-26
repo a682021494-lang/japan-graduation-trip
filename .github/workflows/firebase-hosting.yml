@@ -27,6 +27,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Check current main before running browser suites
+        run: |
+          if [[ "$(git rev-parse HEAD)" != "$(git ls-remote origin refs/heads/main | cut -f1)" ]]; then
+            echo "::error::Main changed after checkout. Run the workflow on current main."
+            exit 1
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: '24'

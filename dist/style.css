@@ -64,7 +64,7 @@ input[type=time]{font:inherit}
 .trip-duration output{font-weight:700;white-space:nowrap}
 .trip-duration input{width:5rem;max-width:100%;min-width:0}
 
-.mobile-nav,.mobile-map-details{display:none}
+.mobile-nav,.mobile-map-details,[data-install-prompt][hidden]{display:none}
 [data-pwa-install] summary{cursor:pointer;min-height:44px;display:list-item;align-content:center}
 [data-pwa-install] .stack{max-width:35rem}
 @media (max-width:900px),(pointer:coarse) {
