@@ -96,8 +96,6 @@ input[type=time]{font:inherit}
   .page .panel{min-width:0}
   .page :is(.form-grid,.quick){grid-template-columns:minmax(0,1fr)}
   .head-inner .brand small,.head-tools .saved-link span{display:none}
-}
-@media (max-width:370px) {
   .head-inner{height:auto;min-height:0;flex-wrap:wrap;padding-block:4px}
   .head-inner .head-tools{width:100%;justify-content:flex-end}
 }
