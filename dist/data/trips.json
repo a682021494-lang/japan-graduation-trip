@@ -2093,7 +2093,7 @@
     "도쿄 디즈니씨": "https://www.tokyodisneyresort.jp/en/tds/",
     "팀랩 플래닛": "https://www.teamlab.art/e/planets/",
     "삿포로 눈축제": "https://www.snowfes.com/news/948.html",
-    "츄라우미 수족관": "https://www.churaumi.okinawa/sp/en/guide/hour/",
+    "츄라우미 수족관": "https://oki-park.jp/kaiyohaku/en/info/31",
     "지브리파크": "https://ghibli-park.jp/en/",
     "하우스텐보스": "https://www.huistenbosch.co.jp/opentime/?lang=en",
     "후지큐 하이랜드": "https://www.fujiq.jp/en/",
@@ -2298,7 +2298,7 @@
     },
     "하우스텐보스": {
       "practical": "시간과 입장료는 방문일과 티켓 종류에 따라 달라집니다.",
-      "practicalUrl": "https://english.huistenbosch.co.jp/ticket/",
+      "practicalUrl": "https://www.huistenbosch.co.jp/ticket/",
       "practicalLabel": "공식 입장권",
       "description": "사세보의 유럽풍 건물과 야간 조명을 둘러보는 테마파크."
     },

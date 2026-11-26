@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [firestore.rules, .github/workflows/firebase-rules.yml]
+    paths: [firestore.rules, .github/workflows/firebase-rules.yml, scripts/firebase-release.mjs]
 
 permissions:
   contents: read
 
 concurrency:
-  group: firebase-rules-live
+  group: firebase-production
   cancel-in-progress: false
 
 jobs:
@@ -29,17 +29,19 @@ jobs:
       - run: npm ci && npm run test:rules
       - name: Deploy Firestore rules
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_RULES_SERVICE_ACCOUNT || secrets.FIREBASE_SERVICE_ACCOUNT_JAPAN_GRADUATION_TRIP_2027 }}
+          HOSTING_CREDENTIAL: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JAPAN_GRADUATION_TRIP_2027 }}
+          RULES_CREDENTIAL: ${{ secrets.FIREBASE_RULES_SERVICE_ACCOUNT }}
         shell: bash
         run: |
-          if [[ -z "$FIREBASE_SERVICE_ACCOUNT" ]]; then
-            echo "::error::The Firestore rules deployment secret is missing."
-            exit 1
-          fi
           umask 077
           credentials="$(mktemp "$RUNNER_TEMP/firebase-rules-credentials.XXXXXX.json")"
           trap 'rm -f -- "$credentials"' EXIT
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$credentials"
-          unset FIREBASE_SERVICE_ACCOUNT
+          node scripts/firebase-release.mjs select "$credentials"
+          if [[ "$(git rev-parse HEAD)" != "$(git ls-remote origin refs/heads/main | cut -f1)" ]]; then
+            echo "::error::Main changed after checkout. Run the workflow on current main."
+            exit 1
+          fi
+          unset HOSTING_CREDENTIAL RULES_CREDENTIAL
           GOOGLE_APPLICATION_CREDENTIALS="$credentials" ./node_modules/.bin/firebase deploy \
             --only firestore:rules --project japan-graduation-trip-2027 --non-interactive
+          node scripts/firebase-release.mjs verify "$credentials"

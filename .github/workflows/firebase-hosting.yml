@@ -4,17 +4,21 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_run:
+    workflows: [Deploy Firestore rules]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: firebase-hosting-live
+  group: firebase-production
   cancel-in-progress: false
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -22,6 +26,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -38,8 +43,19 @@ jobs:
           npx playwright install --with-deps webkit
           npx firebase emulators:exec --only hosting --project demo-trip-2027 \
             'TRIP_QA_ENGINE=webkit node --test scripts/guest-browser.test.mjs'
+      - name: Verify published rules before enabling extended groups
+        id: rules
+        env:
+          HOSTING_CREDENTIAL: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JAPAN_GRADUATION_TRIP_2027 }}
+          RULES_CREDENTIAL: ${{ secrets.FIREBASE_RULES_SERVICE_ACCOUNT }}
+        run: |
+          if [[ "$(git rev-parse HEAD)" != "$(git ls-remote origin refs/heads/main | cut -f1)" ]]; then
+            echo "::error::Main changed after checkout. Run the workflow on current main."
+            exit 1
+          fi
+          node scripts/firebase-release.mjs check
       - name: Test group compatibility with deployed rules
-        if: vars.FIREBASE_EXTENDED_GROUPS != 'true'
+        if: steps.rules.outputs.extended != 'true'
         env:
           TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: |
@@ -49,7 +65,7 @@ jobs:
           cp "$RUNNER_TEMP/production-firestore.rules" firestore.rules
           TRIP_QA_LEGACY=1 npx firebase emulators:exec --only auth,firestore,hosting --project demo-trip-2027 "npm run test:browser"
       - name: Configure published group capabilities
-        if: vars.FIREBASE_EXTENDED_GROUPS == 'true'
+        if: steps.rules.outputs.extended == 'true'
         run: sed -i 's/:false;/:true;/' dist/cloud-config.js
       - name: Deploy Firebase Hosting
         env:
@@ -65,6 +81,10 @@ jobs:
           trap 'rm -f -- "$credentials"' EXIT
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$credentials"
           unset FIREBASE_SERVICE_ACCOUNT
+          if [[ "$(git rev-parse HEAD)" != "$(git ls-remote origin refs/heads/main | cut -f1)" ]]; then
+            echo "::error::Main changed after checkout. Run the workflow on current main."
+            exit 1
+          fi
           GOOGLE_APPLICATION_CREDENTIALS="$credentials" ./node_modules/.bin/firebase deploy \
             --only hosting --project japan-graduation-trip-2027 --non-interactive
       - name: Verify public entry point and travel data
