@@ -2,12 +2,13 @@ const folder='data/areas/';
 const labels={city:'시',special:'특별구',ward:'행정구',county:'군',town:'정',village:'촌'};
 const norm=value=>String(value).normalize('NFKC').normalize('NFD').replace(/\p{Diacritic}|[\s·-]/gu,'').toLowerCase();
 const prefKey=value=>String(Number(value)||0).padStart(2,'0');
+export const koreanPrefectureName=({id,name})=>name+({1:'',13:'도',26:'부',27:'부'}[id]??'현');
 const safeCode=value=>/^\d{5}$/.test(value||'')?value:'';
 const noValue='미확인';
 const areaSource='https://www.e-stat.go.jp/municipalities/cities';
 const officeSource='https://github.com/code4fukui/localgovjp';
 
-export function setupGeography({main,esc,select,page,link,getData,refresh,detailHref,winterPlaceNotice}){
+export function setupGeography({main,esc,select,page,link,getData,getPrefectureNames,refresh,detailHref,winterPlaceNotice}){
   const entries=new Map(), pending=new Map(), failures=new Set();
   let searchText='';
   let placeTypes=[];
@@ -19,7 +20,7 @@ export function setupGeography({main,esc,select,page,link,getData,refresh,detail
     }).then(value=>entries.set(name,value)).catch(()=>failures.add(name)).finally(()=>{pending.delete(name);done();}));
   }
   function metadata(){
-    for(const name of ['prefectures','guides','places','tourism'])load(name);
+    for(const name of ['guides','places','tourism'])load(name);
   }
   const db=()=>entries.get('places')||{};
   const guideCodes=()=>entries.get('guides')||{};
@@ -47,7 +48,7 @@ export function setupGeography({main,esc,select,page,link,getData,refresh,detail
     if(!q)return '';
     const d=getData();
     const matches=values=>values.some(v=>v&&norm(v).includes(q));
-    const prefectures=d.prefectures.filter(p=>matches([p.name,entries.get('prefectures')?.[prefKey(p.id)]]))
+    const prefectures=d.prefectures.filter(p=>matches([p.name,getPrefectureNames()[prefKey(p.id)]]))
       .slice(0,8).map(p=>[href(p.id),p.region+' · '+p.name]);
     const places=Object.entries(db()).filter(([,p])=>matches([p.name,p.ja,p.local,p.localJa]))
       .slice(0,10).map(([id,p])=>[placeHref(id),p.name+' · '+p.ja]);
@@ -111,8 +112,8 @@ export function setupGeography({main,esc,select,page,link,getData,refresh,detail
     for(const [id,site] of sites)if(site.local&&!neighborhoods.has(site.local))neighborhoods.set(site.local,id);
     const chosenLocal=local||place;
     const visibleSites=chosenLocal?.local?sites.filter(([,site])=>site.local===chosenLocal.local):sites;
-    const ja=entries.get('prefectures')?.[pref];
-    const trail=[region,p&&(p.name+({13:'도',24:'현',26:'부',27:'부',1:''}[p.id]??'현')),parent&&short(parent),
+    const ja=getPrefectureNames()[pref];
+    const trail=[region,p&&koreanPrefectureName(p),parent&&short(parent),
       childValue&&short(row),chosenLocal?.local,place?.name].filter(Boolean);
     return `<div class="panel stack area-panel"><h2>행정구역 탐색</h2>${searchForm()}
       <form data-area-filters class="stack">

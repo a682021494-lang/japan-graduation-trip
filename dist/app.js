@@ -1,5 +1,5 @@
 import { daylightSource, eventDates, pendingWinterEvents, winterChecked, winterEvents, winterPlans, winterRestrictions } from './data/winter.js';
-import { setupGeography } from './geography.js';
+import { koreanPrefectureName, setupGeography } from './geography.js';
 import { tripImages } from './data/trip-images.js';
 import { setupCloudUI } from './cloud-ui.js';
 import { calculate, parseImport, freshState, move, matches, formatMoney, numbers, budgetDefaults } from './logic.js';
@@ -36,7 +36,7 @@ const sourceLinks = {
   icn:'https://www.airport.kr/',
   whales:'https://visitokinawajapan.com/travel-inspiration/whale-watching-in-okinawa-/'
 };
-let data, paths, destinations, byId, prefById;
+let data, paths, prefectureNames, destinations, byId, prefById;
 let filters = { q:'', region:'', pref:'', days:'', budget:'', custom:'', type:'', sort:'rank' };
 let selection = { detailDays:0, planId:'osaka', planDays:0, mapPref:0, mapId:'osaka', zoom:1, center:[340,270] };
 let toastTimer;
@@ -56,7 +56,7 @@ const durationOptions = [['','전체 기간'],['0','2박 3일'],['1','3박 4일'
 const budgetOptions = [['','모든 예산'],['0-400000','40만 원 이하'],['400000-600000','40~60만 원'],['600000-800000','60~80만 원'],['800000-1000000','80~100만 원'],['1000000-','100만 원 이상'],['custom','직접 입력']];
 const typeOptions = [['','모든 유형'],...types.map(t=>[t,t])];
 const exploreTypes=[...types.filter(type=>type!=='액티비티'),'체험','역사','친구들과 여행하기 좋은 곳'];
-const geo=setupGeography({main,esc,select,page,link,getData:()=>data,refresh:()=>{
+const geo=setupGeography({main,esc,select,page,link,getData:()=>data,getPrefectureNames:()=>prefectureNames,refresh:()=>{
   if(location.hash.startsWith('#explore')||location.hash.startsWith('#map')||location.hash.startsWith('#trip/')||location.hash.startsWith('#place/')||location.hash==='#saved'){
     const search=document.activeElement?.matches('[data-area-search]');
     const caret=search?document.activeElement.selectionStart:null;
@@ -188,7 +188,7 @@ function mapPage() {
   const h = 540/selection.zoom;
   const locationPoint=geo.coordinate();
   const [x,y] = selection.center;
-  const polygons = data.prefectures.map(p=>`<path class="pref ${p.id===selection.mapPref?'active':''}" d="${paths[p.id]}" fill="${regionsColors[data.regions.indexOf(p.region)]}" tabindex="0" role="button" aria-label="${esc(p.name)}" data-action="map-pref" data-index="${p.id}"><title>${esc(p.name)}</title></path>`).join('');
+  const polygons = data.prefectures.map(p=>`<path class="pref ${p.id===selection.mapPref?'active':''}" d="${paths[p.id]}" fill="${regionsColors[data.regions.indexOf(p.region)]}" tabindex="0" role="button" aria-label="${esc(koreanPrefectureName(p))} · ${esc(prefectureNames[String(p.id).padStart(2,'0')])} · ${esc(p.region)}" data-action="map-pref" data-index="${p.id}"></path>`).join('');
   const pins = recommended.map(d=>{
     const [cx,cy]=project(d.xy);
     return `<circle class="map-marker" cx="${cx}" cy="${cy}" r="${d.id===selection.mapId?5.5:3.5}" tabindex="0" role="button" aria-label="${esc(d.name)}" data-action="map-pin" data-id="${d.id}"><title>${esc(d.name)}</title></circle>`;
@@ -196,7 +196,7 @@ function mapPage() {
   const selectedPin=locationPoint?(()=>{const [cx,cy]=project(locationPoint);return `<circle cx="${cx}" cy="${cy}" r="6" fill="#bd322d" stroke="#fff" stroke-width="2"><title>선택한 위치</title></circle>`;})():'';
   return page('MAP','일본 지도','지도의 도도부현이나 도시를 선택해 위치와 여행 경비를 확인하세요.',`<div class="two">
   <section class="panel stack"><div class="row"><button class="icon" data-action="map-zoom" data-index="1" aria-label="지도 확대">+</button><button class="icon" data-action="map-zoom" data-index="-1" aria-label="지도 축소">−</button>${btn('전체 보기','map-reset')} ${selection.zoom>1?['←','→','↑','↓'].map((a,i)=>`<button class="icon" data-action="map-pan" data-index="${i}" aria-label="지도 ${['왼쪽','오른쪽','위','아래'][i]} 이동">${a}</button>`).join(''):''}</div>
-  <div class="map-shell"><svg viewBox="${x-w/2} ${y-h/2} ${w} ${h}" aria-label="일본 47개 도도부현 지도"><path d="M25 427H196V523H25Z" fill="none" stroke="#8aa5bb" stroke-dasharray="3 3"/><text x="30" y="440" fill="#617d93" font-size="9">오키나와 (삽입도)</text>${polygons}${pins}${selectedPin}</svg></div>
+  <div class="map-shell"><svg viewBox="${x-w/2} ${y-h/2} ${w} ${h}" aria-label="일본 47개 도도부현 지도"><path d="M25 427H196V523H25Z" fill="none" stroke="#8aa5bb" stroke-dasharray="3 3"/><text x="30" y="440" fill="#617d93" font-size="9">오키나와 (삽입도)</text>${polygons}${pins}${selectedPin}</svg><div id="map-tooltip" class="map-tooltip" role="tooltip" hidden></div></div>
   <div class="tags">${data.regions.map((r,i)=>`<span style="background:${regionsColors[i]}">${r}</span>`).join('')}</div>
   <small>출처 · 일본 국토지리원 지구지도 일본, Data of Japan. 오키나와는 삽입도입니다.</small></section>
   <aside class="stack">${geo.mapPanel()}<div class="panel stack">
@@ -204,6 +204,77 @@ function mapPage() {
   ${d?`<a class="card-media" href="${detailHref(d.id)}">${photo(d)}${art(d)}</a><h2>${esc(d.name)}</h2><p>${months.map((m,i)=>`${m} ${priceCell(d,i)}`).join(' · ')}</p><p><b>일본 도착 공항</b> ${esc(d.airport)}</p><a class="btn primary" href="${detailHref(d.id)}">상세 보기 →</a>`:''}</div>
   <div class="panel links"><h3>한국 출발 공항</h3><p>${link('청주 CJJ',sourceLinks.cjj)} · ${link('인천 ICN',sourceLinks.icn)}</p><small>도착 공항은 접근 기준입니다. 직항 및 2027년 운항 여부는 항공사에서 날짜별로 확인하세요.</small></div></aside></div>`);
 }
+const prefecturePath='[data-action="map-pref"]';
+let mapTooltip;
+
+function clearMapTooltip() {
+  if(!mapTooltip)return;
+  main.querySelector('.pref.is-pointed')?.classList.remove('is-pointed');
+  const tip=main.querySelector('#map-tooltip');
+  if(tip)tip.hidden=true;
+  mapTooltip=null;
+}
+
+function showMapTooltip(path,x,y,mode) {
+  const shell=path.closest('.map-shell');
+  const tip=shell.querySelector('#map-tooltip');
+  const bounds=shell.getBoundingClientRect();
+  const id=Number(path.dataset.index);
+  if(tip.hidden||mapTooltip?.id!==id){
+    shell.querySelector('.pref.is-pointed')?.classList.remove('is-pointed');
+    const pref=prefById.get(id);
+    const japanese=prefectureNames[String(id).padStart(2,'0')];
+    tip.innerHTML=`<strong>${esc(koreanPrefectureName(pref))}</strong> <span lang="ja">${esc(japanese)}</span><small>${esc(pref.region)}</small>`;
+    path.classList.add('is-pointed');
+    tip.hidden=false;
+  }
+  const left=x-bounds.left;
+  const top=y-bounds.top;
+  const gap=12, margin=4;
+  const right=bounds.width-tip.offsetWidth-margin;
+  const bottom=bounds.height-tip.offsetHeight-margin;
+  const nextLeft=left+gap<=right?left+gap:left-tip.offsetWidth-gap;
+  const nextTop=top+gap<=bottom?top+gap:top-tip.offsetHeight-gap;
+  tip.style.transform=`translate(${Math.max(margin,Math.min(right,nextLeft))}px,${Math.max(margin,Math.min(bottom,nextTop))}px)`;
+  mapTooltip={id,mode,x,y,relativeX:left/bounds.width,relativeY:top/bounds.height};
+}
+
+function restoreMapTooltip() {
+  if(!mapTooltip)return;
+  const {id,mode,x,y,relativeX,relativeY}=mapTooltip;
+  if(mode==='pointer'){
+    const path=document.elementFromPoint(x,y)?.closest(prefecturePath);
+    if(path&&main.contains(path))showMapTooltip(path,x,y,mode);
+    else clearMapTooltip();
+  }else if(mode==='touch'&&id===selection.mapPref){
+    const path=main.querySelector(`${prefecturePath}[data-index="${id}"]`);
+    if(!path){clearMapTooltip();return;}
+    const bounds=path.closest('.map-shell').getBoundingClientRect();
+    showMapTooltip(path,bounds.left+relativeX*bounds.width,bounds.top+relativeY*bounds.height,mode);
+  }else clearMapTooltip();
+}
+
+function trackMapPointer(event) {
+  if(event.pointerType==='touch')return;
+  const path=event.target.closest(prefecturePath);
+  if(path)showMapTooltip(path,event.clientX,event.clientY,'pointer');
+}
+main.addEventListener('pointerover',trackMapPointer);
+main.addEventListener('pointermove',trackMapPointer);
+main.addEventListener('pointerout',event=>{
+  if(event.pointerType!=='touch'&&mapTooltip?.mode==='pointer'&&
+    event.target.closest(prefecturePath)!==event.relatedTarget?.closest?.(prefecturePath))clearMapTooltip();
+});
+main.addEventListener('pointerup',event=>{
+  if(event.pointerType!=='touch')return;
+  const path=event.target.closest(prefecturePath);
+  if(path)showMapTooltip(path,event.clientX,event.clientY,'touch');
+});
+document.addEventListener?.('pointerdown',event=>{
+  if(mapTooltip?.mode==='touch'&&!event.target.closest(prefecturePath))clearMapTooltip();
+});
+window.addEventListener('resize',restoreMapTooltip);
+
 function comparePage() {
   const chosen = state.compare.map(id=>byId.get(id)).filter(d=>d?.itineraries);
   const fields = [
@@ -352,6 +423,7 @@ function render() {
   const active=route||'home';
   const views={home,explore,map:mapPage,trip:()=>detail(byId.get(arg)),place:placePage,compare:comparePage,plan:planPage,budget:budgetPage,prep:prepPage,winter:winterPage,saved:savedPage,sources:sourcesPage};
   main.innerHTML=cloud.hasRoute(active)?cloud.cloudPage(active,arg||''):(Object.hasOwn(views,active)?views[active]:home)();
+  restoreMapTooltip();
   if(cloud.locked()&&!cloud.hasRoute(active)) {
     for(const element of main.querySelectorAll('[data-action="save"],[data-action="attraction"],[data-action="compare"],[data-action="reset-plan"],[data-action="move-day"],[data-action="move-stop"],[data-action="import"],[data-note],[data-memo],[data-check],[data-add-stop] input,[data-add-stop] button,#compare-choice button,#budget-form button')){
       element.disabled=true;
@@ -570,7 +642,9 @@ async function getJSON(name) {
   return response.json();
 }
 try {
-  [data,paths]=await Promise.all([getJSON('data/trips.json'),getJSON('maps/prefectures.json')]);
+  [data,paths,prefectureNames]=await Promise.all([
+    getJSON('data/trips.json'),getJSON('maps/prefectures.json'),getJSON('data/areas/prefectures.json')
+  ]);
   destinations=data.destinations;
   byId=new Map([...destinations,...data.cities].map(d=>[d.id,d]));
   prefById=new Map(data.prefectures.map(p=>[p.id,p]));

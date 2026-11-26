@@ -63,6 +63,10 @@ jobs:
                cmp -s dist/data/winter.js "$RUNNER_TEMP/hosting-winter" &&
                curl --fail --silent --show-error --max-time 15 "$origin/data/trips.json" -o "$RUNNER_TEMP/hosting-trips" &&
                cmp -s dist/data/trips.json "$RUNNER_TEMP/hosting-trips" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/style.css" -o "$RUNNER_TEMP/hosting-style" &&
+               cmp -s dist/style.css "$RUNNER_TEMP/hosting-style" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/data/areas/prefectures.json" -o "$RUNNER_TEMP/hosting-prefectures" &&
+               cmp -s dist/data/areas/prefectures.json "$RUNNER_TEMP/hosting-prefectures" &&
                grep -iq '^cache-control:.*no-cache' "$RUNNER_TEMP/hosting-headers"; then
               exit 0
             fi
