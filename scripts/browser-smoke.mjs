@@ -185,7 +185,8 @@ export function reauthenticateWithPopup(user) {
     if(!legacy){
       await owner.getByRole('button',{name:'여행 기간 하루 늘리기'}).click();
       await mobile.getByRole('heading',{name:'4일차',exact:true}).waitFor();
-      await owner.locator('[data-group-duration] output').getByText('3박 4일',{exact:true}).waitFor();
+      await owner.reload();
+      await owner.waitForFunction(()=>document.querySelector('[data-group-duration] output')?.textContent==='3박 4일');
       await owner.getByLabel('출국일',{exact:true}).fill('2027-02-06');
       await owner.getByRole('button',{name:'여행 날짜 저장',exact:true}).click();
       await owner.waitForFunction(()=>document.querySelector('[data-cloud-form=travel] [name=returnDate]')?.value==='2027-02-09');

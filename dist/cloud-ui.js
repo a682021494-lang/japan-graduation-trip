@@ -336,6 +336,7 @@ export function setupCloudUI({main,page,esc,render,refresh,go,notify,copy,getSta
   function onClick(e){
     const step=e.target.closest?.('[data-group-duration] [data-duration-step]');
     if(step){
+      if(!step.form?.hasAttribute('data-travel-draft'))document.activeElement?.blur();
       const current=groupTravel();
       void run(()=>saveGroupTravel({...current,days:current.days+Number(step.dataset.durationStep)}),'travel');
       return true;
