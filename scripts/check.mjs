@@ -95,6 +95,13 @@ test('84개 여행지는 로컬 WebP와 이미지 출처 정보를 제공한다'
 test('47개 행정구역 파일의 상·하위 코드와 관광지 참조가 유효하다',async()=>{
   const keys=Object.keys(JSON.parse(await read('data/areas/prefectures.json')));
   assert.equal(keys.length,47);
+  const tourism=JSON.parse(await read('data/areas/tourism.json'));
+  assert.deepEqual(Object.keys(tourism.urls).sort(),keys.sort());
+  assert.match(tourism.checked,/^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(new Set(Object.values(tourism.urls)).size,47);
+  for(const url of Object.values(tourism.urls)){
+    assert.match(url,/^https:\/\/www\.japan\.travel\/en\/destinations\/[a-z-]+\/[a-z-]+\/$/);
+  }
   const groups=await Promise.all(keys.map(async key=>JSON.parse(await read('data/areas/'+key+'.json'))));
   const index=new Map(groups.flat().map(row=>[row[0],row]));
   assert.equal(index.size,2283);

@@ -50,3 +50,6 @@ Noto Sans KR을 일부 문자로 축소해 로컬에 포함했습니다. [Google
 - 행정구역 이름·코드는 일본 e-Stat의 표준 지역 코드에 근거한 2025년 3월 정리본의 사실정보를 사용했습니다. 정령지정도시의 행정구와 도쿄의 특별구를 구분했습니다. 군은 정·촌을 묶는 탐색용 분류이며, 홋카이도의 일부 군 식별자는 내부 분류용입니다. [e-Stat](https://www.e-stat.go.jp/municipalities/cities) · [정리본](https://github.com/OtterSou/japan-municipalities)
 - 지자체 홈페이지와 청사 위치는 CC0로 공개된 localgovjp에서 가져왔습니다. 하마마쓰 개편 구역의 표시는 이전 청사 위치 참조입니다. 일본 정부의 통상 집계 범위인 1,741개 시정촌·특별구와 정령지정도시의 행정구 171개를 수록했습니다. [localgovjp](https://github.com/code4fukui/localgovjp)
 - 신규 상세 관광지 10개는 해당 공식 시설·관광기관 URL과 확인 날짜를 함께 표시합니다. 지도 점은 탐색용 근삿값이며, 미확인 필드는 미확인으로 표시합니다. 다른 지역의 상세 관광 정보는 기존 가이드 범위에서만 제공합니다.
+
+- 47개 도도부현의 JNTO 관광 가이드 링크를 권역별로 열어 확인했습니다. 확인일과 주소는 `dist/data/areas/tourism.json`에 기록합니다. 사이트의 8개 권역 분류를 사용하며, JNTO는 주부와 규슈·오키나와를 세분화합니다.
+- 2026년 11월 26일에 JNTO의 [히로사키성](https://www.japan.travel/en/spot/1836/), [돗토리 사구](https://www.japan.travel/en/spot/949/), [이야 가즈라바시](https://www.japan.travel/en/spot/851/), [다카치호 협곡](https://www.japan.travel/en/spot/615/) 안내를 확인해 개별 관광지 4곳을 추가했습니다. 지도에는 근사 위치를 표시하며 구글 지도 검색에는 관광지 이름과 주소를 사용합니다. 돗토리 사구에는 기존 라이선스 확인 사진을 사용합니다.

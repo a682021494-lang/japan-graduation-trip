@@ -54,9 +54,18 @@ const select = (label, name, items, current) => `<label>${label}<select name="${
 const durationOptions = [['','전체 기간'],['0','2박 3일'],['1','3박 4일']];
 const budgetOptions = [['','모든 예산'],['0-400000','40만 원 이하'],['400000-600000','40~60만 원'],['600000-800000','60~80만 원'],['800000-1000000','80~100만 원'],['1000000-','100만 원 이상'],['custom','직접 입력']];
 const typeOptions = [['','모든 유형'],...types.map(t=>[t,t])];
-const exploreTypes=[...types,'역사','친구들과 여행하기 좋은 곳'];
+const exploreTypes=[...types.filter(type=>type!=='액티비티'),'체험','역사','친구들과 여행하기 좋은 곳'];
 const geo=setupGeography({main,esc,select,page,link,getData:()=>data,refresh:()=>{
-  if(location.hash.startsWith('#explore')||location.hash.startsWith('#map')||location.hash.startsWith('#trip/')||location.hash.startsWith('#place/')||location.hash==='#saved')render();
+  if(location.hash.startsWith('#explore')||location.hash.startsWith('#map')||location.hash.startsWith('#trip/')||location.hash.startsWith('#place/')||location.hash==='#saved'){
+    const search=document.activeElement?.matches('[data-area-search]');
+    const caret=search?document.activeElement.selectionStart:null;
+    render();
+    if(search){
+      const input=main.querySelector('[data-area-search]');
+      input?.focus({preventScroll:true});
+      if(caret!==null)input?.setSelectionRange(caret,caret);
+    }
+  }
 },detailHref});
 const destinationOptions = () => destinations.map(d=>[d.id,d.name]);
 const photo = (d, cls = '') => {
@@ -95,7 +104,7 @@ function exploreResults() {
   const rows = destinations.filter(d=>matches(d,filters));
   if (filters.sort==='price') rows.sort((a,b)=>(a.price[+filters.days||0]?.[0]??Infinity)-(b.price[+filters.days||0]?.[0]??Infinity));
   else if(filters.sort!=='rank') rows.sort((a,b)=>b.scores[filters.sort]-a.scores[filters.sort]);
-  const cities = (filters.budget||filters.type||filters.types?.length||filters.days) ? [] : data.cities.filter(d=>matches(d,filters));
+  const cities = (filters.budget||filters.days) ? [] : data.cities.filter(d=>matches(d,filters));
   return `<div class="stack"><h2>추천 코스 <small>${rows.length}곳</small></h2><div class="${rows.length?'card-grid':'panel empty'}">${rows.length?rows.map(card).join(''):'조건에 맞는 추천 코스가 없습니다.'}</div>
     ${cities.length?`<h2>도시와 지역 <small>${cities.length}곳</small></h2><div class="city-grid city-image-grid">${cities.map(c=>`<a class="city-image-card" href="${detailHref(c.id)}">${photo(c,'city-thumb')}<span><b>${esc(c.name)}</b><small>${esc(c.region)} · ${esc(c.attractions.join(', '))}</small>${tripImages[c.id].ai?'<small class="city-art-label">AI 삽화</small>':''}</span></a>`).join('')}</div>`:''}</div>`;
 }
@@ -134,7 +143,9 @@ function placePage() {
   const owner=data?.links?.[0]||[d?.id||'poi',d?i:Number(id)];
   const saved=state.attractions.includes(owner.join(':'));
   const picture=data?.image?byId.get(data.image):null;
-  const safeImage=picture?`<div class="card-media">${photo(picture,'detail-cover')}${art(picture)}</div>`:'';
+  const credit=picture&&tripImages[picture.id];
+  const safeImage=picture?`<div class="card-media">${photo(picture,'detail-cover')}${art(picture)}</div>
+    ${!credit.ai?`<small class="links">${link(credit.artist,credit.source)} · ${credit.licenseUrl?link(credit.license,credit.licenseUrl):esc(credit.license)} · WebP 변환</small>`:''}`:'';
   const locked=cloud.locked()?' disabled':'';
   const controls=`<div class="row">${btn(saved?'♥ 저장됨':'♡ 관광지 저장','attraction',`data-id="${esc(owner[0])}" data-index="${owner[1]}" aria-pressed="${saved}"${locked}`)}</div>
     <form id="add-place-plan" class="fields" data-title="${esc(title)}">
@@ -151,14 +162,14 @@ function project([lon,lat]) {
   return lat>=29 ? [(lon-127)*27+45,(46-lat)*29+22] : [(lon-122)*24+30,(29-lat)*14+445];
 }
 function mapPage() {
-  const d = byId.get(selection.mapId);
-  const p = prefById.get(selection.mapPref);
+  const recommended=geo.recommendations(selection.mapPref);
+  const d = recommended.find(guide=>guide.id===selection.mapId);
   const w = 680/selection.zoom;
   const h = 540/selection.zoom;
   const locationPoint=geo.coordinate();
   const [x,y] = selection.center;
-  const polygons = data.prefectures.map(p=>`<path class="pref ${p.id===selection.mapPref?'active':''}" d="${paths[p.id]}" fill="${regionsColors[data.regions.indexOf(p.region)]}" data-action="map-pref" data-index="${p.id}"><title>${esc(p.name)}</title></path>`).join('');
-  const pins = destinations.filter(d=>!p||d.pref===p.id).map(d=>{
+  const polygons = data.prefectures.map(p=>`<path class="pref ${p.id===selection.mapPref?'active':''}" d="${paths[p.id]}" fill="${regionsColors[data.regions.indexOf(p.region)]}" tabindex="0" role="button" aria-label="${esc(p.name)}" data-action="map-pref" data-index="${p.id}"><title>${esc(p.name)}</title></path>`).join('');
+  const pins = recommended.map(d=>{
     const [cx,cy]=project(d.xy);
     return `<circle class="map-marker" cx="${cx}" cy="${cy}" r="${d.id===selection.mapId?5.5:3.5}" tabindex="0" role="button" aria-label="${esc(d.name)}" data-action="map-pin" data-id="${d.id}"><title>${esc(d.name)}</title></circle>`;
   }).join('');
@@ -169,7 +180,7 @@ function mapPage() {
   <div class="tags">${data.regions.map((r,i)=>`<span style="background:${regionsColors[i]}">${r}</span>`).join('')}</div>
   <small>출처 · 일본 국토지리원 지구지도 일본, Data of Japan. 오키나와는 삽입도입니다.</small></section>
   <aside class="stack">${geo.mapPanel()}<div class="panel stack">
-  <form id="marker-choice">${select('추천 도시 선택','city',[['','선택하세요'],...destinations.filter(g=>!p||g.pref===p.id).map(g=>[g.id,g.name])],selection.mapId)}</form>
+  <form id="marker-choice">${select('추천 도시 선택','city',[['','선택하세요'],...recommended.map(g=>[g.id,g.name])],selection.mapId)}</form>
   ${d?`<a class="card-media" href="${detailHref(d.id)}">${photo(d)}${art(d)}</a><h2>${esc(d.name)}</h2><p>${months.map((m,i)=>`${m} ${priceCell(d,i)}`).join(' · ')}</p><p><b>일본 도착 공항</b> ${esc(d.airport)}</p><a class="btn primary" href="${detailHref(d.id)}">상세 보기 →</a>`:''}</div>
   <div class="panel links"><h3>한국 출발 공항</h3><p>${link('청주 CJJ',sourceLinks.cjj)} · ${link('인천 ICN',sourceLinks.icn)}</p><small>도착 공항은 접근 기준입니다. 직항 및 2027년 운항 여부는 항공사에서 날짜별로 확인하세요.</small></div></aside></div>`);
 }
@@ -450,7 +461,7 @@ main.addEventListener('click',event=>{
   }
 });
 main.addEventListener('keydown',e=>{
-  if(e.target.matches('circle[data-action]')&&['Enter',' '].includes(e.key)){
+  if(e.target.matches('[data-action="map-pin"],[data-action="map-pref"]')&&['Enter',' '].includes(e.key)){
     e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));
   }
 });

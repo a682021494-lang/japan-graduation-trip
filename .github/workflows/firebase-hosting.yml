@@ -42,7 +42,7 @@ jobs:
           unset FIREBASE_SERVICE_ACCOUNT
           GOOGLE_APPLICATION_CREDENTIALS="$credentials" ./node_modules/.bin/firebase deploy \
             --only hosting --project japan-graduation-trip-2027 --non-interactive
-      - name: Verify public entry point and image catalogue
+      - name: Verify public entry point and travel data
         shell: bash
         run: |
           origin='https://japan-graduation-trip-2027.web.app'
@@ -53,6 +53,12 @@ jobs:
                cmp -s dist/app.js "$RUNNER_TEMP/hosting-app" &&
                curl --fail --silent --show-error --max-time 15 "$origin/data/trip-images.js" -o "$RUNNER_TEMP/hosting-images" &&
                cmp -s dist/data/trip-images.js "$RUNNER_TEMP/hosting-images" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/geography.js" -o "$RUNNER_TEMP/hosting-geography" &&
+               cmp -s dist/geography.js "$RUNNER_TEMP/hosting-geography" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/data/areas/tourism.json" -o "$RUNNER_TEMP/hosting-tourism" &&
+               cmp -s dist/data/areas/tourism.json "$RUNNER_TEMP/hosting-tourism" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/data/areas/places.json" -o "$RUNNER_TEMP/hosting-places" &&
+               cmp -s dist/data/areas/places.json "$RUNNER_TEMP/hosting-places" &&
                grep -iq '^cache-control:.*no-cache' "$RUNNER_TEMP/hosting-headers"; then
               exit 0
             fi
