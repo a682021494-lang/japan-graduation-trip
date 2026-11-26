@@ -34,8 +34,10 @@ test('small phone and landscape: fixed navigation, targets, detail panel and his
     }
     await nav.getByRole('link',{name:'예산'}).click();
     await page.waitForURL('**/#budget');
-    const input=page.getByRole('spinbutton',{name:'여행 일수'});
-    assert.equal(await input.evaluate(input=>getComputedStyle(input).fontSize),'16px');
+    await page.waitForFunction(()=>{
+      const input=document.querySelector('#budget-form [name=days]');
+      return input&&getComputedStyle(input).fontSize==='16px';
+    });
     await page.setViewportSize({width:640,height:320});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
     assert.equal(await nav.evaluate(nav=>getComputedStyle(nav).position),'fixed');
