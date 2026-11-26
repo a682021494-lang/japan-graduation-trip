@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { extname } from 'node:path';
 import { chromium, devices, webkit } from 'playwright';
 
 const base=process.env.TRIP_QA_URL||'http://127.0.0.1:15500/';
@@ -84,27 +87,43 @@ test('Android Chromium: one-finger map drag and two-finger pinch',{skip:engine!=
 });
 
 test('PWA manifest, offline public content and private-cache isolation',async()=>{
+  let offline=false;
+  const contentTypes={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json',
+    '.webmanifest':'application/manifest+json','.png':'image/png','.webp':'image/webp','.woff':'font/woff'};
+  // A transport failure at the origin exercises the worker without WebKit's automation network gate.
+  const server=createServer(async(req,res)=>{
+    if(offline){req.socket.destroy();return;}
+    const path=new URL(req.url,'http://localhost').pathname;
+    const file=path==='/'?'/index.html':path;
+    try{
+      const body=await readFile(new URL('../dist'+file,import.meta.url));
+      res.writeHead(200,{'Content-Type':contentTypes[extname(file)]||'application/octet-stream','Cache-Control':'no-store'});
+      res.end(body);
+    }catch{res.writeHead(404);res.end();}
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const origin='http://127.0.0.1:'+server.address().port;
   const context=await browser.newContext(devices[engine===webkit?'iPhone 13':'Pixel 7']);
   try {
     const page=await context.newPage();
     await page.route('**/__/firebase/init.json',route=>route.fulfill({json:{privateTestOnly:'never cache'}}));
-    await page.goto(pageUrl('?pwa-test=1#explore'));
+    await page.goto(origin+'/?pwa-test=1#explore');
     await page.waitForFunction(async()=>Boolean(await navigator.serviceWorker.getRegistration()));
     await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));
     const manifest=await page.evaluate(()=>fetch('/manifest.webmanifest').then(response=>response.json()));
     assert.equal(manifest.display,'standalone');
     assert.deepEqual(manifest.icons.map(icon=>icon.sizes),['192x192','512x512']);
-    await page.goto(pageUrl('?pwa-test=1#place/2'));
+    await page.goto(origin+'/?pwa-test=1#place/2');
     await page.getByRole('heading',{name:'구사쓰 온천 유바타케'}).waitFor();
     await page.evaluate(()=>fetch('/__/firebase/init.json'));
     const entries=await page.evaluate(async()=>Promise.all((await caches.keys()).map(async key=>(await (await caches.open(key)).keys()).map(entry=>new URL(entry.url).pathname))));
     assert(entries.flat().includes('/data/areas/places.json'));
     assert(!entries.flat().some(path=>path.startsWith('/__/')||path==='/cloud-sdk.js'));
-    await context.setOffline(true);
-    await page.reload();
+    offline=true;
+    await page.goto(origin+'/index.html?pwa-test=1#place/2');
     await page.getByRole('heading',{name:'구사쓰 온천 유바타케'}).waitFor();
-    await context.setOffline(false);
-    await page.goto(pageUrl('?pwa-test=1#map/10/10426/2'));
+    offline=false;
+    await page.goto(origin+'/?pwa-test=1#map/10/10426/2');
     await page.getByRole('complementary',{name:'선택한 여행지'}).waitFor();
-  }finally{await context.close();}
+  }finally{await context.close();await new Promise(resolve=>server.close(resolve));}
 });
