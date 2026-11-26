@@ -196,7 +196,7 @@ export function reauthenticateWithPopup(user) {
     await mobile.getByRole('button',{name:'회원 탈퇴 및 데이터 삭제'}).click();
     await mobile.getByRole('heading',{name:/우리의 첫 졸업여행/}).waitFor();
     await owner.getByRole('heading',{name:'구성원 1명'}).waitFor();
-    await owner.getByRole('listitem').filter({hasText:'5박 6일'}).getByText('0표').waitFor();
+    await owner.getByRole('listitem').filter({hasText:'5박 6일'}).waitFor({state:'hidden'});
     await owner.getByText('남겨진 의견이 없습니다.',{exact:true}).waitFor();
 
     await go(owner,'settings','설정');
