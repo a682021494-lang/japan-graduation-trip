@@ -44,6 +44,19 @@ test('small phone and landscape: fixed navigation, targets, detail panel and his
   }finally{await context.close();}
 });
 
+test('signed-out account controls fit a 390px viewport',async()=>{
+  const context=await browser.newContext({viewport:{width:390,height:850}});
+  try{
+    const page=await context.newPage();
+    await page.route('**/__/firebase/init.json',route=>route.fulfill({
+      json:{projectId:'demo-trip-2027',apiKey:'demo-api-key',authDomain:'localhost'}
+    }));
+    await page.goto(pageUrl('#trip/osaka'));
+    await page.getByRole('button',{name:'Google 로그인'}).waitFor();
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
+  }finally{await context.close();}
+});
+
 test('Android Chromium: one-finger map drag and two-finger pinch',{skip:engine!==chromium},async()=>{
   const context=await browser.newContext(devices['Pixel 7']);
   try {
