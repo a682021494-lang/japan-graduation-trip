@@ -28,7 +28,7 @@ const routes = {
   budget:'1인당 숙박 부담액',
   prep:'0 / 23개 완료',
   saved:'JSON 내보내기',
-  winter:'2월 4~11일',
+  winter:'2월 4일 ~ 2월 11일',
   sources:'OpenAI ImageGen',
   profile:'내 프로필',
   settings:'설정',

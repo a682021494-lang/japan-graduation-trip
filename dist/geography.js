@@ -7,7 +7,7 @@ const noValue='미확인';
 const areaSource='https://www.e-stat.go.jp/municipalities/cities';
 const officeSource='https://github.com/code4fukui/localgovjp';
 
-export function setupGeography({main,esc,select,page,link,getData,refresh,detailHref}){
+export function setupGeography({main,esc,select,page,link,getData,refresh,detailHref,winterPlaceNotice}){
   const entries=new Map(), pending=new Map(), failures=new Set();
   let searchText='';
   let placeTypes=[];
@@ -160,6 +160,7 @@ ${p?tourismLink(p.id):''}
     if(!title)return page('PLACE','관광지','관광 정보를 확인하세요.',`<p class="notice">${pending.has('places')?'관광 정보를 불러오는 중입니다.':'등록된 관광지를 찾지 못했습니다.'}</p>`);
     const info=d.attractionInfo[title]||{};
     const credits=item?.source||d.official[title];
+    const itemId=item?Object.keys(db()).find(key=>db()[key]===item):id;
     const rows=[
       ['주소',item?.address],['입장료',item?.fee],['운영시간·휴무',item?.hours],['가까운 역과 교통편',item?.access],
       ['권장 체류 시간',item?.duration],['주변 맛집·관광지',item?.nearby],['겨울철 방문 시 주의사항',item?.winter]
@@ -171,6 +172,7 @@ ${p?tourismLink(p.id):''}
       <p class="notice">2027년 방문 전 최신 운영시간, 요금 및 휴무를 공식 안내에서 확인하세요.</p>
       <p class="links">${link('구글 지도',google)} ${credits?' · '+link('공식 관광 안내',credits):''}
       ${item?.area?` · <a href="${href(item.area.slice(0,2),item.area,id&&db()[id]?id:Object.keys(db()).find(key=>db()[key]===item))}">일본 지도에서 보기</a>`:''}</p>
+      ${winterPlaceNotice(itemId,title)}
       ${item?.xy?`<small>지도 표시 좌표(약간의 오차가 있을 수 있음) · ${item.xy[1]}, ${item.xy[0]}</small>`:''}
       ${credits?`<small>출처 확인 · ${item?.checked||'기존 가이드'}</small>`:''}
       ${controls}</section>`);

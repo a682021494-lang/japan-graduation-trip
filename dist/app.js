@@ -1,3 +1,4 @@
+import { daylightSource, eventDates, pendingWinterEvents, winterChecked, winterEvents, winterPlans, winterRestrictions } from './data/winter.js';
 import { setupGeography } from './geography.js';
 import { tripImages } from './data/trip-images.js';
 import { setupCloudUI } from './cloud-ui.js';
@@ -66,7 +67,23 @@ const geo=setupGeography({main,esc,select,page,link,getData:()=>data,refresh:()=
       if(caret!==null)input?.setSelectionRange(caret,caret);
     }
   }
-},detailHref});
+},detailHref,winterPlaceNotice:(id,title)=>{
+  const event=winterEvents.find(event=>event.name===title);
+  return (event?eventCard(event):'')+winterRestrictionList(restriction=>restriction.places?.includes(id)||restriction.name===title||title==='자오 수빙'&&restriction.name==='자오 로프웨이');
+}});
+const eventCard = event => `<article class="winter"><h3>${esc(event.name)}</h3><p><b>${esc(eventDates(event))}</b> · ${esc(event.kind)} · ${esc(prefById.get(event.pref).name)}</p><p>${esc(event.note)} ${link('공식 안내',event.source)}</p></article>`;
+function winterRestrictionList(matchesRestriction) {
+  const restrictions=winterRestrictions.filter(matchesRestriction);
+  return restrictions.length?`<div class="stack links">${restrictions.map(item=>`<article class="notice"><strong>${esc(item.name)} · ${esc(item.kind)}</strong><p>${esc(item.note)} ${link('공식 운영 안내',item.source)}</p></article>`).join('')}</div>`:'';
+}
+function winterPlanNote(d) {
+  const note=winterPlans[d.id];
+  return note?`<div class="notice links"><strong>2027년 1~2월 일정 안내</strong><p>${esc(note)}</p><p>야외 일정과 막차는 방문일 현지 시각으로 확인하세요. ${link('일본 국립천문대 일몰 시각',daylightSource)}</p></div>`:'';
+}
+function guideWinterEvents(d) {
+  const events=winterEvents.filter(event=>event.pref===d.pref||(d.relatedPrefs||[]).includes(event.pref));
+  return events.length?`<section class="panel stack links"><h2>여행 날짜가 맞으면 들를 겨울 행사</h2>${events.map(eventCard).join('')}</section>`:'';
+}
 const destinationOptions = () => destinations.map(d=>[d.id,d.name]);
 const photo = (d, cls = '') => {
   const {file, subject, ai} = tripImages[d.id];
@@ -126,12 +143,15 @@ function detail(d) {
     <p><b>여행 장점과 주의점</b><br>${esc(d.description)}<br>${esc(d.caution)}</p></section>
     <section class="panel"><h2>졸업여행 적합도</h2><p class="muted">편집 평가 · 1점은 선택지가 적거나 이동에 제약이 많음, 5점은 선택지가 풍부하거나 이용이 쉬움.</p>
     ${labels.map((s,i)=>`<div class="rating"><span>${s}</span><div class="bar"><i style="width:${d.scores[i]*20}%"></i></div><b>${d.scores[i]}/5</b></div>`).join('')}</section></div>`:''}
+    ${winterRestrictionList(item=>item.guides?.includes(d.id))}
     <section class="panel stack"><h2>관광 명소</h2><div class="attraction-grid">${d.attractions.map((a,i)=>{
       const saved = state.attractions.includes(d.id+':'+i);
       const info = data.attractionInfo[a];
-      return `<article class="attraction stack"><h3><a href="#place/${d.id}/${i}">${esc(a)} →</a></h3>${info?.description?`<p>${esc(info.description)}</p>`: ''}<p class="links">${link('구글 지도',mapLink(a,context))}${data.official[a]?' · '+link('공식 안내',data.official[a]):''}</p><small>${info?.practical?esc(info.practical):'운영시간·요금은 방문 전 확인'}</small>${info?.practicalUrl?`<p class="links">${link(info.practicalLabel,info.practicalUrl)}</p>`:''}<button class="text-btn" data-action="attraction" data-id="${d.id}" data-index="${i}" aria-pressed="${saved}">${saved?'♥ 저장됨':'♡ 관광지 저장'}</button></article>`;
+      const event=winterEvents.find(event=>event.name===a);
+      return `<article class="attraction stack"><h3><a href="#place/${d.id}/${i}">${esc(a)} →</a></h3>${info?.description?`<p>${esc(info.description)}</p>`: ''}<p class="links">${link('구글 지도',mapLink(a,context))}${data.official[a]?' · '+link('공식 안내',data.official[a]):''}</p><small>${event?esc(eventDates(event)):info?.practical?esc(info.practical):'운영시간·요금은 방문 전 확인'}</small>${info?.practicalUrl?`<p class="links">${link(info.practicalLabel,info.practicalUrl)}</p>`:''}<button class="text-btn" data-action="attraction" data-id="${d.id}" data-index="${i}" aria-pressed="${saved}">${saved?'♥ 저장됨':'♡ 관광지 저장'}</button></article>`;
     }).join('')}</div></section>
-    ${full?`<section class="panel stack"><h2>추천 일정</h2>${tabs('detail-days',selection.detailDays)}<div class="timeline">${d.itineraries[selection.detailDays].map((s,i)=>`<div class="day"><b>${i+1}일차</b><p>${esc(s)}</p></div>`).join('')}</div><small>첫날과 마지막 날은 항공편 시간에 맞춰 조정하세요.</small></section>`:''}</div>`);
+    ${guideWinterEvents(d)}
+    ${full?`<section class="panel stack"><h2>추천 일정</h2>${winterPlanNote(d)}${tabs('detail-days',selection.detailDays)}<div class="timeline">${d.itineraries[selection.detailDays].map((s,i)=>`<div class="day"><b>${i+1}일차</b><p>${esc(s)}</p></div>`).join('')}</div><small>첫날과 마지막 날은 항공편 시간에 맞춰 조정하세요.</small></section>`:''}</div>`);
 }
 function placePage() {
   const [,id,index]=location.hash.slice(1).split('/');
@@ -201,7 +221,7 @@ function comparePage() {
 function planFor(id=selection.planId, index=selection.planDays) {
   const d=byId.get(id);
   const custom=state.plans[id+'-'+index];
-  return custom?.length===d.itineraries[index].length ? custom : d.itineraries[index].map(line=>({stops:line.split('→'),memo:''}));
+  return custom?.length===d.itineraries[index].length ? custom : d.itineraries[index].map(line=>({stops:line.split('→').map(stop=>stop.trim()),memo:''}));
 }
 function setPlan(days) { state.plans[selection.planId+'-'+selection.planDays]=days; save(); }
 function dayBlocks(d, day, i, length) {
@@ -222,6 +242,7 @@ function planPage() {
   const encoded = s => encodeURIComponent(s);
   return page('ITINERARY','여행 일정','추천 코스를 바탕으로 방문 순서와 메모를 편집하세요.',`<div class="stack">
   <div class="panel row noprint"><form id="plan-choice" class="tools-select">${select('여행지','city',destinationOptions(),d.id)}</form>${tabs('plan-days',selection.planDays)}</div>
+  ${winterPlanNote(d)}
   <p class="notice">편집 내용은 자동 저장됩니다. 첫날과 마지막 날은 항공편 시간에 맞추세요. 시간대는 이동 순서를 고려해 조정하세요. 실제 경로와 티켓 가격이 정해지면 메모에 기록할 수 있습니다.</p>
   <section class="two"><div><h2>${esc(d.name)} · ${months[selection.planDays]}</h2><div class="timeline" style="margin-top:12px">${days.map((day,i)=>`<article class="day">
     <div class="day-head"><h3>${i+1}일차</h3><span class="row noprint"><button class="icon" data-action="move-day" data-day="${i}" data-index="-1" aria-label="앞 날짜로 이동" ${i===0?'disabled':''}>↑</button><button class="icon" data-action="move-day" data-day="${i}" data-index="1" aria-label="뒤 날짜로 이동" ${i===days.length-1?'disabled':''}>↓</button></span></div>
@@ -272,19 +293,20 @@ function prepPage() {
 }
 const checkProgress=()=>`${checkGroups.flatMap(([,a],i)=>a.map((_,j)=>i+'-'+j)).filter(k=>state.checks.includes(k)).length} / 23개 완료`;
 function winterPage() {
-  const events = [
-    ['일본 신년','1월 1일 전후','시설별 휴무를 확인하세요. 신사와 철도는 혼잡할 수 있습니다.'],
-    ['한국 설 연휴','2월 6~9일','설날은 2월 7일입니다. 앞뒤 항공권과 숙박 견적을 비교하세요.',sourceLinks.calendar],
-    ['삿포로 눈축제','2월 4~11일 · 공식 발표','오도리·쓰도무·스스키노. 날짜가 겹치는 설 연휴에는 숙박을 일찍 비교하세요.',sourceLinks.snow],
-    ['오키나와 고래 관찰','겨울 시즌','출항과 관찰 여부는 기상 및 운영사에 따라 달라집니다.',sourceLinks.whales],
-    ['겨울 스포츠와 설경','1~2월 · 시설별 일정','홋카이도·나가노·자오에서는 적설에 따라 리프트와 버스 운행이 달라질 수 있습니다.']
-  ];
   return page('WINTER','2027 겨울 여행','평년 기온과 공식 행사 일정을 참고해 여행 날짜를 고르세요.',`<div class="stack"><section class="panel stack links"><h2>지역별 1월·2월 기온</h2>
   <div class="table-scroll"><table><thead><tr><th>대표 지역</th><th>1월 평균</th><th>2월 평균</th><th>복장과 적설</th></tr></thead>
   <tbody>${destinations.filter(d=>d.weather.length).map(d=>`<tr><th>${esc(d.name)}</th><td>${d.weather[0]}°C</td><td>${d.weather[1]}°C</td><td>${d.id==='sapporo'?'적설·결빙. 방수 신발과 장갑':d.id==='kanazawa'?'비와 눈에 대비해 방수 외투':d.id==='okinawa'?'해안 바람에 대비해 바람막이':'아침저녁에 입을 외투와 겹옷'}</td></tr>`).join('')}</tbody></table></div>
   <small>1991~2020년 대표 관측소 평년값. 산간이나 해안은 시내와 다를 수 있습니다. ${link('일본 기상청',sourceLinks.climate)}</small></section>
-  <section class="panel stack links"><h2>연휴와 겨울 행사</h2>${events.map(([n,date,desc,url])=>`<article class="winter"><h3>${n} · ${date}</h3><p>${desc} ${url?link('공식 안내',url):''}</p></article>`).join('')}
-  <p class="notice">신년·설 연휴와 눈축제 기간에는 항공과 숙박 가격이 오를 수 있습니다. 날짜 조정이 가능하면 평일 견적도 함께 비교하세요. 별도 공지가 필요한 지역 행사 일정은 미확정입니다.</p></section></div>`);
+  <section class="panel stack links"><h2>2027년 1~2월 확정 행사</h2>
+  <small>공식 발표 확인일 ${esc(winterChecked)} · 예매 전 최신 공지와 귀가편을 확인하세요.</small>
+  ${winterEvents.map(eventCard).join('')}</section>
+  <section class="panel stack links"><h2>개최 일정 미확정</h2>
+  <p>2027년 공식 날짜가 발표되면 방문일과 교통편을 확인하세요.</p>${pendingWinterEvents.map(eventCard).join('')}</section>
+  <section class="panel stack"><h2>겨울철 운영·출입 제한</h2>${winterRestrictionList(()=>true)}</section>
+  <section class="panel stack links"><h2>겨울 여행 날짜와 이동</h2>
+  <p>일본 신년 전후에는 시설 휴무와 대중교통 시간표를 확인하세요. 한국 설 연휴는 2월 6~9일이며 설날은 2월 7일입니다. ${link('우주항공청 2027년 월력요항',sourceLinks.calendar)}</p>
+  <p>야외 관광은 해 지기 전에 둘러보고 장거리 이동은 오전에 출발하세요. 출발일 일몰과 공식 교통편을 확인하세요. ${link('일본 국립천문대 일몰 시각',daylightSource)}</p>
+  <p>오키나와 고래 관찰은 겨울에도 운영사와 해상 상황에 따라 출항 여부가 달라집니다. ${link('오키나와 공식 관광 안내',sourceLinks.whales)}</p></section></div>`);
 }
 function savedPage() {
   const chosen = state.saved.map(id=>byId.get(id)).filter(Boolean);

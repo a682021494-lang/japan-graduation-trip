@@ -117,3 +117,29 @@ test('47개 행정구역 파일의 상·하위 코드와 관광지 참조가 유
     assert.match(place.source,/^https:\/\//);
   }
 });
+
+test('겨울 행사 날짜와 18개 코스의 겨울 안내', async () => {
+  const {eventDates,pendingWinterEvents,winterEvents,winterPlans,winterRestrictions,winterWindow}=await import('../dist/data/winter.js');
+  assert.deepEqual(Object.keys(winterPlans).sort(),trips.destinations.map(d=>d.id).sort());
+  const validDate = date => /^2027-0[12]-\d{2}$/.test(date)
+    && date>=winterWindow.start&&date<=winterWindow.end
+    && new Date(date).toISOString().slice(0,10)===date;
+  for(const event of winterEvents){
+    const dates=event.dates||[event.start,event.end];
+    assert(dates.length&&dates.every(validDate),event.name);
+    assert.deepEqual([...new Set(dates)].sort(),dates);
+    assert.match(event.source,/^https:\/\//);
+    assert(trips.prefectures.some(p=>p.id===event.pref));
+  }
+  for(const event of pendingWinterEvents){
+    assert.equal(eventDates(event),'개최 일정 미확정');
+    assert.equal(event.end,undefined);
+    assert.match(event.source,/^https:\/\//);
+  }
+  const places=JSON.parse(await read('data/areas/places.json'));
+  for(const item of winterRestrictions){
+    assert.match(item.source,/^https:\/\//);
+    assert((item.guides||[]).every(id=>ids.includes(id)));
+    assert((item.places||[]).every(id=>places[id]));
+  }
+});
