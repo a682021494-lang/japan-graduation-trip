@@ -54,8 +54,7 @@ jobs:
             exit 1
           fi
           node scripts/firebase-release.mjs check
-      - name: Test group compatibility with deployed rules
-        if: steps.rules.outputs.extended != 'true'
+      - name: Test the legacy group fallback against the previous production rules
         env:
           TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: |
