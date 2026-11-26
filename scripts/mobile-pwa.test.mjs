@@ -27,6 +27,11 @@ test('small phone and landscape: fixed navigation, targets, detail panel and his
     await sheet.waitFor();
     await sheet.getByRole('button',{name:'닫기'}).click();
     await sheet.waitFor({state:'hidden'});
+    await nav.getByRole('link',{name:'일정'}).click();
+    await page.locator('.day-head .icon').first().waitFor();
+    for(const item of await page.locator('.day-head .icon,#account .btn').all()){
+      const box=await item.boundingBox();assert(box.width>=44&&box.height>=44);
+    }
     await nav.getByRole('link',{name:'예산'}).click();
     await page.waitForURL('**/#budget');
     const input=page.getByRole('spinbutton',{name:'여행 일수'});
