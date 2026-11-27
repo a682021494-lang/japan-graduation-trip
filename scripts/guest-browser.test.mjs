@@ -169,3 +169,47 @@ test('초기 자료, 행정구역, 전국 검색 오류 후 재시도',async()=>
   await retry.click();
   await page.locator('[data-area-results] a[href="#map/10/10426"]').waitFor();
 }));
+
+
+test('attraction card photos, zoom, credits and unavailable state',async()=>inPage(profiles.iphone,async page=>{
+  await visit(page,'trip/osaka');
+  const cover=page.getByRole('button',{name:'도톤보리 사진 확대',exact:true});
+  await cover.waitFor();
+  const image=cover.locator('img');
+  assert.equal(await image.getAttribute('loading'),'lazy');
+  await page.waitForFunction(()=>{
+    const cover=document.querySelector('[data-photo-title="도톤보리"]');
+    if(!cover)return false;
+    const {width,height}=cover.getBoundingClientRect();
+    return height>0&&Math.abs(width/height-16/9)<.02;
+  });
+  await cover.click();
+  const gallery=page.locator('dialog[open]');
+  await gallery.getByRole('heading',{name:'도톤보리 사진',exact:true}).waitFor();
+  await gallery.locator('img').evaluate(img=>img.decode());
+  assert((await gallery.locator('[data-photo-credit] a').all()).length>=1);
+  await page.getByRole('button',{name:'닫기',exact:true}).click();
+  await visit(page,'place/1');
+  await page.getByRole('button',{name:'메이지 신궁 사진 확대',exact:true}).click();
+  const position=gallery.locator('[data-photo-position]');
+  assert.equal(await position.textContent(),'1 / 3');
+  await gallery.getByRole('button',{name:'다음 사진'}).click();
+  assert.equal(await position.textContent(),'2 / 3');
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await position.textContent(),'3 / 3');
+  await gallery.locator('img').evaluate(img=>{
+    const send=(name,x)=>{
+      const event=new Event(name,{bubbles:true});
+      Object.defineProperty(event,name==='touchstart'?'touches':'changedTouches',{value:[{clientX:x,clientY:100}]});
+      img.dispatchEvent(event);
+    };
+    send('touchstart',180);
+    send('touchend',65);
+  });
+  assert.equal(await position.textContent(),'1 / 3');
+  await gallery.locator('img').evaluate(img=>img.decode());
+  await page.getByRole('button',{name:'닫기',exact:true}).click();
+  await visit(page,'trip/sapporo');
+  const missing=page.locator('.attraction').filter({has:page.getByRole('link',{name:/스키장 및 스노보드 체험/})});
+  await missing.getByText('대표 사진 미확보',{exact:true}).waitFor();
+}));

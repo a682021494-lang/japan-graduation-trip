@@ -129,6 +129,10 @@ jobs:
                cmp -s dist/sw.js "$RUNNER_TEMP/hosting-service-worker" &&
                curl --fail --silent --show-error --max-time 15 "$origin/manifest.webmanifest" -o "$RUNNER_TEMP/hosting-manifest" &&
                cmp -s dist/manifest.webmanifest "$RUNNER_TEMP/hosting-manifest" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/data/reviewed-attraction-photos.js" -o "$RUNNER_TEMP/hosting-attraction-photos" &&
+               cmp -s dist/data/reviewed-attraction-photos.js "$RUNNER_TEMP/hosting-attraction-photos" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/images/attractions/commons-001.webp" -o "$RUNNER_TEMP/hosting-attraction-webp" &&
+               cmp -s dist/images/attractions/commons-001.webp "$RUNNER_TEMP/hosting-attraction-webp" &&
                grep -iq '^cache-control:.*no-cache' "$RUNNER_TEMP/hosting-headers"; then
               exit 0
             fi

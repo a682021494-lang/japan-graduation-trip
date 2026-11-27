@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
 import { calculate, freshState, matches, move, parseImport, travelSettings, dateAfter, durationLabel } from '../dist/logic.js';
@@ -157,4 +158,45 @@ test('당일치기와 장기 일정 날짜 및 일별 비용을 함께 계산한
   state.budget={...state.budget,days:365,departure:'2027-01-01'};
   state.plans['osaka-day-365']=[{stops:['도착'],memo:'마지막 날'}];
   assert.deepEqual(parseImport(JSON.stringify(state)),state);
+});
+
+
+test('attraction photos reference real licensed WebP and cover all registered names',async()=>{
+  const {canonicalAttraction,attractionPhotos}=await import('../dist/data/attraction-photos.js');
+  const {reviewedPhotos}=await import('../dist/data/reviewed-attraction-photos.js');
+  const places=JSON.parse(await read('data/areas/places.json'));
+  const names=new Set([...trips.destinations,...trips.cities].flatMap(guide=>guide.attractions)
+    .concat(Object.values(places).map(place=>place.name)).map(canonicalAttraction));
+  const sources=new Map();
+  const checksums=new Set();
+  const stored=new Set();
+  let covered=0, galleries=0;
+  for(const name of names){
+    const photos=attractionPhotos(name);
+    assert(photos.length<=5);
+    if(photos.length)covered++;
+    if(photos.length>=3)galleries++;
+    for(const photo of photos){
+      assert(!photo.ai&&photo.artist&&photo.license,name);
+      assert.equal(new URL(photo.source).hostname,'commons.wikimedia.org');
+      const source=decodeURIComponent(photo.source).replaceAll(' ','_');
+      assert(!sources.has(source),`Repeated source for ${name} and ${sources.get(source)}`);
+      sources.set(source,name);
+      assert.match(photo.file,/^(?:trips|attractions)\/[a-z0-9-]+\.webp$/);
+      const bytes=await readFile(new URL('images/'+photo.file,dist));
+      assert.equal(bytes.subarray(8,12).toString(),'WEBP');
+      const hash=createHash('sha256').update(bytes).digest('hex');
+      assert(!checksums.has(hash),`Repeated image bytes for ${name}`);
+      checksums.add(hash);
+      if(photo.file.startsWith('attractions/')){
+        assert(bytes.length<=250_000,`Oversized attraction WebP: ${photo.file}`);
+        assert.match(photo.checkedOn,/^\d{4}-\d{2}-\d{2}$/);
+        stored.add(photo.file.slice('attractions/'.length));
+      }
+    }
+  }
+  for(const name of Object.keys(reviewedPhotos))assert(names.has(name),name);
+  assert.deepEqual(new Set(await readdir(new URL('images/attractions/',dist))),stored);
+  assert(covered>0);
+  console.log(`명소 ${names.size}곳 · 사진 확보 ${covered}곳 · 미확보 ${names.size-covered}곳 · 사진 3장 이상 ${galleries}곳 · 연결 사진 ${sources.size}장`);
 });

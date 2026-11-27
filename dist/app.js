@@ -1,3 +1,4 @@
+import { setupAttractionGallery } from './attraction-gallery.js';
 import { setupMapGestures, viewBox } from './map-gestures.js';
 import { fitMobileViewport, setupPwa } from './pwa.js';
 import { daylightSource, eventDates, pendingWinterEvents, winterChecked, winterEvents, winterPlans, winterRestrictions } from './data/winter.js';
@@ -48,6 +49,7 @@ const btn = (label, action, attrs = '', style = '') => `<button type="button" cl
 const link = (label, url) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a>`;
 const mapLink = (name, context = '') => 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent([name,context,'일본'].filter(Boolean).join(' '));
 const detailHref = id => '#trip/'+id;
+const attractionGallery=setupAttractionGallery({esc,link,dialog,body:dialogBody,main});
 const moneyRange = range => range ? `${range[0]/10000}~${range[1]/10000}만 원` : '별도 산정';
 const priceCell = (d, days=state.budget.days) => moneyRange(d.price?.[days-3]);
 const weather = d => d.weather.length ? `1월 ${d.weather[0]}°C · 2월 ${d.weather[1]}°C` : '해당 지역 평년값 미수록';
@@ -58,7 +60,7 @@ const personalDuration = () => durationControl(state.budget.days,esc,'data-perso
 const budgetOptions = [['','모든 예산'],['0-400000','40만 원 이하'],['400000-600000','40~60만 원'],['600000-800000','60~80만 원'],['800000-1000000','80~100만 원'],['1000000-','100만 원 이상'],['custom','직접 입력']];
 const typeOptions = [['','모든 유형'],...types.map(t=>[t,t])];
 const exploreTypes=[...types.filter(type=>type!=='액티비티'),'체험','역사','친구들과 여행하기 좋은 곳'];
-const geo=setupGeography({main,esc,select,page,link,fetchJSON:getJSON,getData:()=>data,getPrefectureNames:()=>prefectureNames,refresh:()=>{
+const geo=setupGeography({main,esc,select,page,link,fetchJSON:getJSON,attractionCover:attractionGallery.cover,getData:()=>data,getPrefectureNames:()=>prefectureNames,refresh:()=>{
   if(location.hash.startsWith('#explore')||location.hash.startsWith('#map')||location.hash.startsWith('#trip/')||location.hash.startsWith('#place/')||location.hash==='#saved'){
     const search=document.activeElement?.matches('[data-area-search]');
     const caret=search?document.activeElement.selectionStart:null;
@@ -150,7 +152,7 @@ function detail(d) {
       const saved = state.attractions.includes(d.id+':'+i);
       const info = data.attractionInfo[a];
       const event=winterEvents.find(event=>event.name===a);
-      return `<article class="attraction stack"><h3><a href="#place/${d.id}/${i}">${esc(a)} →</a></h3>${info?.description?`<p>${esc(info.description)}</p>`: ''}<p class="links">${link('구글 지도',mapLink(a,context))}${data.official[a]?' · '+link('공식 안내',data.official[a]):''}</p><small>${event?esc(eventDates(event)):info?.practical?esc(info.practical):'운영시간·요금은 방문 전 확인'}</small>${info?.practicalUrl?`<p class="links">${link(info.practicalLabel,info.practicalUrl)}</p>`:''}<button class="text-btn" data-action="attraction" data-id="${d.id}" data-index="${i}" aria-pressed="${saved}">${saved?'♥ 저장됨':'♡ 관광지 저장'}</button></article>`;
+      return `<article class="attraction stack">${attractionGallery.cover(a)}<h3><a href="#place/${d.id}/${i}">${esc(a)} →</a></h3>${info?.description?`<p>${esc(info.description)}</p>`: ''}<p class="links">${link('구글 지도',mapLink(a,context))}${data.official[a]?' · '+link('공식 안내',data.official[a]):''}</p><small>${event?esc(eventDates(event)):info?.practical?esc(info.practical):'운영시간·요금은 방문 전 확인'}</small>${info?.practicalUrl?`<p class="links">${link(info.practicalLabel,info.practicalUrl)}</p>`:''}<button class="text-btn" data-action="attraction" data-id="${d.id}" data-index="${i}" aria-pressed="${saved}">${saved?'♥ 저장됨':'♡ 관광지 저장'}</button></article>`;
     }).join('')}</div></section>
     ${guideWinterEvents(d)}
     <section class="panel stack"><h2>여행 기간과 일정</h2>${personalDuration()}${winterPlanNote(d)}${templatePicker(d)}
@@ -165,10 +167,7 @@ function placePage() {
   if(!title)return geo.detail(id,d?.id,i,'','');
   const owner=data?.links?.[0]||[d?.id||'poi',d?i:Number(id)];
   const saved=state.attractions.includes(owner.join(':'));
-  const picture=data?.image?byId.get(data.image):null;
-  const credit=picture&&tripImages[picture.id];
-  const safeImage=picture?`<div class="card-media">${photo(picture,'detail-cover')}${art(picture)}</div>
-    ${!credit.ai?`<small class="links">${link(credit.artist,credit.source)} · ${credit.licenseUrl?link(credit.license,credit.licenseUrl):esc(credit.license)} · WebP 변환</small>`:''}`:'';
+  const safeImage=attractionGallery.detail(title);
   const locked=cloud.locked()?' disabled':'';
   const controls=`<div class="row">${btn(saved?'♥ 저장됨':'♡ 관광지 저장','attraction',`data-id="${esc(owner[0])}" data-index="${owner[1]}" aria-pressed="${saved}"${locked}`)}</div>
     <form id="add-place-plan" class="fields" data-title="${esc(title)}">

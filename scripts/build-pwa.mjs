@@ -3,7 +3,7 @@ import { readFile, writeFile, readdir } from 'node:fs/promises';
 
 const html=await readFile('dist/index.html','utf8');
 const entry=[...html.matchAll(/(?:src|href)="((?:app|style)\.[a-z]+[^"]*)"/g)].map(match=>'/'+match[1]);
-const shell=['/',...entry,'/pwa.js','/map-gestures.js','/logic.js','/geography.js','/cloud-ui.js','/cloud-model.js','/cloud.js',
+const shell=['/',...entry,'/pwa.js','/map-gestures.js','/attraction-gallery.js','/data/attraction-photos.js','/data/reviewed-attraction-photos.js','/logic.js','/geography.js','/cloud-ui.js','/cloud-model.js','/cloud.js',
   '/cloud-config.js','/data/trip-images.js','/data/trips.json','/data/winter.js','/data/areas/prefectures.json','/maps/prefectures.json',
   '/fonts.css','/fonts/noto-sans-kr.woff','/manifest.webmanifest','/icons/japan-180.png','/icons/japan-192.png','/icons/japan-512.png'];
 const source=await readFile('src/service-worker.js','utf8');

@@ -8,7 +8,7 @@ const noValue='미확인';
 const areaSource='https://www.e-stat.go.jp/municipalities/cities';
 const officeSource='https://github.com/code4fukui/localgovjp';
 
-export function setupGeography({main,esc,select,page,link,fetchJSON,getData,getPrefectureNames,refresh,detailHref,winterPlaceNotice}){
+export function setupGeography({main,esc,select,page,link,fetchJSON,attractionCover,getData,getPrefectureNames,refresh,detailHref,winterPlaceNotice}){
   const entries=new Map(), pending=new Map(), failures=new Set();
   let searchText='';
   let placeTypes=[];
@@ -84,7 +84,7 @@ export function setupGeography({main,esc,select,page,link,fetchJSON,getData,getP
   }
   function placeList(){
     const pairs=Object.entries(db()).filter(([,item])=>placeTypes.every(type=>item.tags?.includes(type)));
-    return pairs.length?pairs.map(([id,item])=>`<a class="btn" href="${placeHref(id)}">${esc(item.name)}</a>`).join('')
+    return pairs.length?pairs.map(([id,item])=>`<article class="attraction stack">${attractionCover(item.name)}<a href="${placeHref(id)}">${esc(item.name)} →</a></article>`).join('')
       :entries.has('places')?'<p>조건에 맞는 관광지가 없습니다.</p>':'';
   }
   function explorePanel(){
@@ -93,7 +93,7 @@ export function setupGeography({main,esc,select,page,link,fetchJSON,getData,getP
     return `<section class="panel stack"><h2>전국 행정구역과 관광지</h2>${searchForm()}<a class="btn" href="#map">지도에서 지역 탐색</a>
       ${facets.length?`<fieldset class="area-type-filters" data-place-types><legend>관광지 유형 · 모두 충족</legend>
       ${facets.map(type=>`<label><input type="checkbox" value="${esc(type)}" ${placeTypes.includes(type)?'checked':''}> ${esc(type)}</label>`).join('')}</fieldset>
-      <div class="row" data-place-list>${placeList()}</div>`:''}</section>`;
+      <div class="attraction-grid" data-place-list>${placeList()}</div>`:''}</section>`;
   }
   function mapPanel(){
     metadata();
@@ -131,7 +131,7 @@ export function setupGeography({main,esc,select,page,link,fetchJSON,getData,getP
       ${trail.length?`<p class="notice" aria-label="탐색 경로">${trail.map(esc).join(' → ')}</p>`:''}
       ${p&&!rows.length?`<p>${failures.has(pref)?'행정구역 데이터를 불러오지 못했습니다.':'행정구역을 불러오는 중입니다.'}</p>${failures.has(pref)?retryButton(pref):''}`:''}
       ${row?.[6]?`<small class="links">지도 점은 청사 위치를 기준으로 합니다. ${link('청사 지도',maps(row[6].slice().reverse().join(',')))} ${https(row[7])?link('지자체 홈페이지',row[7]):''}</small>`:''}
-      ${visibleSites.length?`<h3>출처가 확인된 관광지</h3><div class="row">${visibleSites.map(([id,s])=>`<a class="btn" href="${placeHref(id)}">${esc(s.name)}</a>`).join('')}</div>`:''}
+      ${visibleSites.length?`<h3>출처가 확인된 관광지</h3><div class="attraction-grid">${visibleSites.map(([id,s])=>`<article class="attraction stack">${attractionCover(s.name)}<a href="${placeHref(id)}">${esc(s.name)}</a></article>`).join('')}</div>`:''}
       ${p?`<h3>등록된 여행 가이드</h3>${guides.length?`<div class="row">${guides.map(g=>`<a class="btn" href="${detailHref(g.id)}">${esc(g.name)}</a>`).join('')}</div>`:'<small>현재 선택에 연결된 가이드는 아직 없습니다.</small>'}`:''}
 ${p?tourismLink(p.id):''}
       <small class="links">${link('e-Stat 행정구역 코드',areaSource)} · ${link('청사 좌표·홈페이지',officeSource)}</small></div>`;
