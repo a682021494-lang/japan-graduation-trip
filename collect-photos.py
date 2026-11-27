@@ -47,6 +47,18 @@ for name, filenames in extras.items():
         alias='File:'+filename
         candidates.append((name,alias))
         titles[alias]=filename
+queries=[line.split('\t') for line in Path('photo-search.tsv').read_text().splitlines()]
+search_items=[]
+for name, query in queries:
+    try:
+        response=requests.get('https://commons.wikimedia.org/w/api.php',params={'format':'json','formatversion':2,'action':'query','list':'search','srnamespace':6,'srlimit':3,'srsearch':query+' filetype:bitmap'},headers=session_headers,timeout=16)
+        response.raise_for_status()
+        for p in response.json()['query']['search']:
+            search_items.append((name,p['title']))
+            titles[p['title']]=p['title'].removeprefix('File:')
+    except Exception as error:
+        print('Search failed:',query,str(error)[:150])
+candidates=search_items
 def get(item):
     i,(name,article)=item
     filename=titles.get(article)
@@ -81,7 +93,7 @@ def get(item):
     except Exception as error:
         print(i,filename,str(error)[:200]);return None
 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-    for result in pool.map(get,enumerate(candidates,1)):
+    for result in pool.map(get,enumerate(candidates,201)):
         if result:photos[result[0]]=result[1]
 (output/'candidates.json').write_text(json.dumps(photos,ensure_ascii=False,indent=2))
 from PIL import ImageDraw
