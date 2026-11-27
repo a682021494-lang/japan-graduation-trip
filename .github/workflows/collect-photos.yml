@@ -1,0 +1,18 @@
+name: Collect licensed attraction photos for review
+on:
+  push:
+    branches: [attraction-photo-research]
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install Pillow requests
+      - run: python collect-photos.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: attraction-photos-review
+          path: collected/
