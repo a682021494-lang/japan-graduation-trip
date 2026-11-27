@@ -117,7 +117,12 @@ test('PWA manifest, offline public content and private-cache isolation',async()=
     await page.getByRole('heading',{name:'구사쓰 온천 유바타케'}).waitFor();
     await page.goto(origin+'/?pwa-test=1#place/1');
     const attraction=page.getByRole('button',{name:'메이지 신궁 사진 확대',exact:true});
-    await attraction.locator('img').evaluate(img=>img.decode());
+    const cover=attraction.locator('img');
+    await cover.scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>{
+      const image=document.querySelector('[data-photo-title="메이지 신궁"][data-photo-index="0"] img');
+      return image?.complete&&image.naturalWidth>0;
+    });
     await page.evaluate(()=>fetch('/__/firebase/init.json'));
     const entries=await page.evaluate(async()=>Promise.all((await caches.keys()).map(async key=>(await (await caches.open(key)).keys()).map(entry=>new URL(entry.url).pathname))));
     assert(entries.flat().includes('/data/areas/places.json'));
@@ -128,7 +133,10 @@ test('PWA manifest, offline public content and private-cache isolation',async()=
     await page.getByRole('heading',{name:'구사쓰 온천 유바타케'}).waitFor();
     await page.goto(origin+'/index.html?pwa-test=1#place/1');
     await attraction.click();
-    await page.locator('dialog[open] .attraction-gallery-image').evaluate(img=>img.decode());
+    await page.waitForFunction(()=>{
+      const image=document.querySelector('dialog[open] .attraction-gallery-image');
+      return image?.complete&&image.naturalWidth>0;
+    });
     offline=false;
     await page.goto(origin+'/?pwa-test=1#map/10/10426/2');
     await page.getByRole('complementary',{name:'선택한 여행지'}).waitFor();
