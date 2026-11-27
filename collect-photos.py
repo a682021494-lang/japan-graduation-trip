@@ -35,6 +35,18 @@ except Exception as error:
 for article, filename in {'明治神宮':'Meiji-jingū main hall.jpg','弘前城':'Hirosaki Castle Keep Tower 20220508.jpg',
     '祖谷のかずら橋':'Iyanokazurabashi Bridge.jpg','高千穂峡':'Manai Falls at Takachiho Gorge.jpg'}.items():
     titles[article]=filename
+print('Found primary file titles:',sum(bool(v) for v in titles.values()))
+extras={
+  '메이지 신궁':['Meiji-jingū grand hall.jpg','Meiji-jingu Haupthalle 1.jpg'],
+  '히로사키성':['Hirosaki castle.jpg'],
+  '다카치호 협곡':['Takachiho-gorge.jpg'],
+  '이야 가즈라바시':['IyanoKazurabashi.jpg','Kazurabashi IyaValley2.JPG'],
+}
+for name, filenames in extras.items():
+    for filename in filenames:
+        alias='File:'+filename
+        candidates.append((name,alias))
+        titles[alias]=filename
 def get(item):
     i,(name,article)=item
     filename=titles.get(article)
@@ -45,8 +57,12 @@ def get(item):
         def value(k):return clean(meta.get(k,{}).get('value',''))
         license=value('LicenseShortName');artist=value('Artist') or value('Credit')
         license_url=value('LicenseUrl')
-        if not artist or not (re.fullmatch(r'CC BY(?:-SA)? (?:2\.0|2\.5|3\.0|4\.0)',license) or license in ('Public domain','CC0')):return None
-        if license.startswith('CC') and not license_url.startswith('https://creativecommons.org/'):return None
+        if license_url.startswith('//'):license_url='https:'+license_url
+        if license_url.startswith('http://creativecommons.org/'):license_url=license_url.replace('http://','https://',1)
+        if not artist or not (re.fullmatch(r'CC BY(?:-SA)? (?:2\.0|2\.5|3\.0|4\.0)',license) or license in ('Public domain','CC0')):
+            print('License or credit skipped:',i,filename,license,bool(artist));return None
+        if license.startswith('CC') and not license_url.startswith('https://creativecommons.org/'):
+            print('License URL skipped:',i,filename,license,license_url);return None
         url=info.get('thumburl') or info['url']
         if not url.startswith('https://upload.wikimedia.org/'):return None
         r=requests.get(url,headers=session_headers,timeout=18);r.raise_for_status()
@@ -55,7 +71,7 @@ def get(item):
         return i,{'name':name,'article':article,'file':nameout,'source':info['descriptionurl'],'artist':artist,'license':license,'licenseUrl':license_url,'filename':page['title']}
     except Exception as error:
         print(i,filename,str(error)[:200]);return None
-with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
     for result in pool.map(get,enumerate(candidates,1)):
         if result:photos[result[0]]=result[1]
 (output/'candidates.json').write_text(json.dumps(photos,ensure_ascii=False,indent=2))
