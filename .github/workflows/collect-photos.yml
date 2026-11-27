@@ -1,24 +1,32 @@
-name: Review candidate photos for remaining landmarks
+name: Cross-check Japanese administrative readings
 on:
   push:
     branches: [attraction-photo-research]
 permissions:
   contents: read
 jobs:
-  collect:
-    timeout-minutes: 10
+  postal-data:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install requests pillow
-      - run: python collect-photos.py
+      - name: Read Japan Post municipal kana data
+        shell: bash
+        run: |
+          mkdir verified
+          curl -fSL --max-time 45 https://www.post.japanpost.jp/zipcode/dl/utf/zip/utf_ken_all.zip -o postal.zip
+          unzip -oq postal.zip
+          python - <<'PY'
+          from pathlib import Path
+          import csv
+          source = next(Path('.').glob('*.csv'))
+          with source.open(encoding='utf-8-sig', newline='') as stream:
+              rows = sorted({(row[0],row[3],row[4],row[6],row[7]) for row in csv.reader(stream)})
+          with open('verified/japan-post-municipalities.tsv','w',encoding='utf-8',newline='') as stream:
+              csv.writer(stream,delimiter='\t').writerows(rows)
+          print(len(rows))
+          PY
       - uses: actions/upload-artifact@v4
         with:
-          name: attraction-followup-photos
-          path: collected
+          name: japan-post-municipality-readings
+          path: verified
           retention-days: 1
