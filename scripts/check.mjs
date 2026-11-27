@@ -161,7 +161,7 @@ test('당일치기와 장기 일정 날짜 및 일별 비용을 함께 계산한
 });
 
 
-test('attraction photos reference real licensed WebP and cover all registered names',async()=>{
+test('all registered attractions have licensed photos or labeled AI illustrations',async()=>{
   const {canonicalAttraction,attractionPhotos}=await import('../dist/data/attraction-photos.js');
   const {reviewedPhotos}=await import('../dist/data/reviewed-attraction-photos.js');
   const places=JSON.parse(await read('data/areas/places.json'));
@@ -170,18 +170,35 @@ test('attraction photos reference real licensed WebP and cover all registered na
   const sources=new Map();
   const checksums=new Set();
   const stored=new Set();
-  let covered=0, galleries=0;
+  let photographed=0, illustrated=0, illustrations=0, galleries=0;
   for(const name of names){
     const photos=attractionPhotos(name);
-    assert(photos.length<=5);
-    if(photos.length)covered++;
-    if(photos.length>=3)galleries++;
+    assert(photos.length>=1&&photos.length<=5,name);
+    const actual=photos.filter(photo=>!photo.ai).length;
+    if(actual)photographed++;
+    else illustrated++;
+    if(actual>=3)galleries++;
     for(const photo of photos){
-      assert(!photo.ai&&photo.artist&&photo.license,name);
-      assert.equal(new URL(photo.source).hostname,'commons.wikimedia.org');
-      const source=decodeURIComponent(photo.source).replaceAll(' ','_');
-      assert(!sources.has(source),`Repeated source for ${name} and ${sources.get(source)}`);
-      sources.set(source,name);
+      assert(photo.artist&&photo.license,name);
+      assert.equal(new URL(photo.source).protocol,'https:');
+      if(photo.ai){
+        assert.equal(photo.artist,'OpenAI ImageGen',name);
+        assert.equal(new URL(photo.licenseUrl).hostname,'openai.com',name);
+        assert(photo.caption&&photo.file.endsWith('-illustration.webp'),name);
+        illustrations++;
+      }else{
+        const host=new URL(photo.source).hostname;
+        if(host==='www.env.go.jp'){
+          assert.equal(new URL(photo.original).hostname,host);
+          assert.equal(new URL(photo.licenseUrl).hostname,host);
+          assert(photo.editedBy&&photo.caption,name);
+        }else{
+          assert.equal(host,'commons.wikimedia.org');
+        }
+        const source=decodeURIComponent(photo.original||photo.source).replaceAll(' ','_');
+        assert(!sources.has(source),`Repeated source for ${name} and ${sources.get(source)}`);
+        sources.set(source,name);
+      }
       assert.match(photo.file,/^(?:trips|attractions)\/[a-z0-9-]+\.webp$/);
       const bytes=await readFile(new URL('images/'+photo.file,dist));
       assert.equal(bytes.subarray(8,12).toString(),'WEBP');
@@ -197,6 +214,6 @@ test('attraction photos reference real licensed WebP and cover all registered na
   }
   for(const name of Object.keys(reviewedPhotos))assert(names.has(name),name);
   assert.deepEqual(new Set(await readdir(new URL('images/attractions/',dist))),stored);
-  assert(covered>0);
-  console.log(`명소 ${names.size}곳 · 사진 확보 ${covered}곳 · 미확보 ${names.size-covered}곳 · 사진 3장 이상 ${galleries}곳 · 연결 사진 ${sources.size}장`);
+  assert(sources.size>=237);
+  console.log(`명소 ${names.size}곳 · 실제 사진 ${photographed}곳 / ${sources.size}장 · AI 대체 ${illustrated}곳 / ${illustrations}장 · 실제 사진 3장 이상 ${galleries}곳`);
 });

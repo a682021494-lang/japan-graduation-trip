@@ -60,6 +60,23 @@ Noto Sans KR을 일부 문자로 축소해 로컬에 포함했습니다. [Google
 
 ## 개별 관광 명소 사진
 
-2026년 11월 27일 기준 가이드 84개와 전국 지도 상세 정보에 연결된 고유 명소·체험 항목은 161곳입니다. 같은 장소의 이름 표기는 `dist/data/attraction-photos.js`에서 통합합니다. 실제 장소와 일치하고 라이선스를 확인한 사진 237장을 151곳에 연결했습니다. 36곳에 사진이 3장 이상 있습니다. 사진을 확보하지 못한 10곳은 화면에서 ‘대표 사진 미확보’로 표시합니다.
+첫 사진 배포에서 가이드 84개와 전국 지도 상세 정보에 연결된 고유 명소·체험 항목은 161곳입니다. 같은 장소의 이름 표기는 `dist/data/attraction-photos.js`에서 통합합니다. 실제 장소와 일치하고 라이선스를 확인한 사진 237장을 151곳에 연결했습니다. 36곳에 사진이 3장 이상 있습니다. 사진을 확보하지 못한 10곳은 당시 ‘대표 사진 미확보’로 표시했습니다.
 
 기존 사진의 출처는 `dist/data/trip-images.js`에, 새 사진의 원본 링크·저작자·라이선스·확인일은 `dist/data/reviewed-attraction-photos.js`에 기록합니다. 새 사진은 크기를 줄여 WebP로 변환했으며 원본 라이선스를 따릅니다. 목록과 상세 화면에서 지연 로딩하고, PWA에 새 명소 사진을 최대 48장까지 저장합니다.
+
+### 미확보 10곳 추가 조사
+
+2026년 11월 27일 기준 161곳 모두 이미지가 있습니다. 기존 사진 237장에 실제 사진 23장과 AI 일러스트 1장을 추가했습니다. 실제 사진은 160곳에 260장이고, 42곳에 3장 이상 있습니다. 사진별 저작자, 원본, 이용 조건, 확인일은 `dist/data/reviewed-attraction-photos.js`에서 확인할 수 있습니다.
+
+| 등록 명칭 | 일본어 · 영어 검색 명칭 | 추가한 이미지 |
+| --- | --- | --- |
+| 팀랩 플래닛 | チームラボプラネッツ · teamLab Planets TOKYO | 도요스 전시장 외관 1장. 전시장 내부 촬영 조건은 [공식 안내](https://prd-art.team-lab.cn/en/e/planets/) 참고 |
+| 스키장 및 스노보드 체험 | スキー・スノーボード体験、札幌国際スキー場 · Skiing and snowboarding, Sapporo Kokusai Ski Resort | 삿포로 국제 스키장 3장. 봄 촬영 사진은 캡션에 표시 |
+| 노보리베츠 온천 | 登別温泉 · Noboribetsu Onsen | 노천 족욕과 온천 거리 3장 |
+| 라라포트 후쿠오카 | ららぽーと福岡 · LaLaport Fukuoka | 플라워파크 출입구 1장 |
+| 고래 관찰 투어 | 慶良間・座間味ホエールウォッチング · Kerama / Zamami whale watching | 일본 환경성의 [게라마 제도 고래 관찰 코스](https://www.env.go.jp/nature/nationalparks/list/kerama-shoto/course/07/) 사진 3장. [공공데이터 이용약관 1.0과 사이트별 조건](https://www.env.go.jp/nature/nationalparks/terms/)에 따라 출처, 이용일, 변환 주체를 표시 |
+| 유후인 료칸 | 由布院の旅館 · Yufuin ryokan | 유후인 료칸과 노천탕 2장 |
+| 미야지마 | 宮島、厳島 · Miyajima, Itsukushima | 섬, 해안과 상점가 4장 |
+| 사누키 우동 | 讃岐うどん · Sanuki udon | 사누키 우동 음식 사진 3장 |
+| 구마몬 스퀘어 | くまモンスクエア · Kumamon Square | [구마모토시 관광 가이드](https://kumamoto-guide.jp/spots/detail/367)의 360도 무대와 카페 안내를 참고한 AI 일러스트 1장. 사진 및 캐릭터 이용 조건을 함께 확인해 캐릭터 도안은 사용하지 않았습니다. [구마몬랜드 이용 안내](https://kumamon-land.jp/mypage/file/riyou_tebiki.pdf) |
+| 시로가네 공원 | 白銀公園、白銀の滝 · Shirogane Park, Shirogane Falls | [야마가타현 관광 안내](https://yamagatakanko.com/attractions/detail_11484.html)에서 공원 입구에 위치한 것으로 확인한 폭포 3장 |

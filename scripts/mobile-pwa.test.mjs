@@ -123,16 +123,32 @@ test('PWA manifest, offline public content and private-cache isolation',async()=
       const image=document.querySelector('[data-photo-title="메이지 신궁"][data-photo-index="0"] img');
       return image?.complete&&image.naturalWidth>0;
     });
+    const illustration=page.getByRole('button',{name:'구마몬 스퀘어 AI 생성 일러스트 확대',exact:true});
+    await page.goto(origin+'/?pwa-test=1#place/kumamoto/2');
+    await illustration.locator('img').scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>{
+      const image=document.querySelector('[data-photo-title="구마몬 스퀘어"] img');
+      return image?.complete&&image.naturalWidth>0;
+    });
     await page.evaluate(()=>fetch('/__/firebase/init.json'));
     const entries=await page.evaluate(async()=>Promise.all((await caches.keys()).map(async key=>(await (await caches.open(key)).keys()).map(entry=>new URL(entry.url).pathname))));
     assert(entries.flat().includes('/data/areas/places.json'));
     assert(entries.some(cache=>cache.includes('/images/attractions/commons-001.webp')&&cache.every(path=>path.startsWith('/images/attractions/'))));
+    assert(entries.flat().includes('/images/attractions/kumamon-square-illustration.webp'));
     assert(!entries.flat().some(path=>path.startsWith('/__/')||path==='/cloud-sdk.js'));
     offline=true;
     await page.goto(origin+'/index.html?pwa-test=1#place/2');
     await page.getByRole('heading',{name:'구사쓰 온천 유바타케'}).waitFor();
     await page.goto(origin+'/index.html?pwa-test=1#place/1');
     await attraction.click();
+    await page.waitForFunction(()=>{
+      const image=document.querySelector('dialog[open] .attraction-gallery-image');
+      return image?.complete&&image.naturalWidth>0;
+    });
+    await page.getByRole('button',{name:'닫기',exact:true}).click();
+    await page.goto(origin+'/index.html?pwa-test=1#place/kumamoto/2');
+    await illustration.click();
+    await page.getByRole('heading',{name:'구마몬 스퀘어 AI 생성 일러스트',exact:true}).waitFor();
     await page.waitForFunction(()=>{
       const image=document.querySelector('dialog[open] .attraction-gallery-image');
       return image?.complete&&image.naturalWidth>0;

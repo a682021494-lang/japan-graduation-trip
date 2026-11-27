@@ -64,7 +64,7 @@ try{
           bitmap.close();
         })),files.slice(offset,offset+8));
       }
-      console.log(`명소 사진 ${files.length}장 HTTP 및 WebP 디코딩 검증 통과`);
+      console.log(`명소 이미지 ${files.length}장 HTTP 및 WebP 디코딩 검증 통과`);
     }
     assert.deepEqual(imageErrors,[]);
     console.log(`${width}px: 84개 목록 이미지와 상세 이미지 검증 통과`);

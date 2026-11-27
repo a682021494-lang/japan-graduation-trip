@@ -1,4 +1,4 @@
-// Place and attribution reviewed against the original Wikimedia Commons file.
+// Place and attribution reviewed against the cited original or illustration reference.
 export const reviewedPhotos = {
   "메이지 신궁": [
     {
@@ -1600,6 +1600,249 @@ export const reviewedPhotos = {
       "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
       "file": "attractions/commons-522.webp",
       "checkedOn": "2026-11-27"
+    }
+  ],
+  "팀랩 플래닛": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Teamlab_toyosu.jpg",
+      "artist": "Syced",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "file": "attractions/commons-601.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "도요스 전시장 건물 외관"
+    }
+  ],
+  "라라포트 후쿠오카": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:LaLaport_Fukuoka_FlowerPark_Entrance.jpg",
+      "artist": "Junknote",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "file": "attractions/commons-603.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "플라워파크 출입구"
+    }
+  ],
+  "노보리베츠 온천": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:NoboribetsuOnsen-Ashiyu.JPG",
+      "artist": "XT",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+      "file": "attractions/commons-606.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "오유누마 인근의 노천 족욕"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Spa_Noboribetu%EF%BC%8F%E7%99%BB%E5%88%A5%E6%B8%A9%E6%B3%89%E8%A1%97%E3%83%BB%E9%96%93%E6%AC%A0%E6%B3%89_-_panoramio.jpg",
+      "artist": "T DMY",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+      "file": "attractions/commons-605.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "온천 거리의 간헐천"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Noboribetsu_Manseikaku.jpg",
+      "artist": "Totti",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "file": "attractions/commons-609.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "온천 거리의 만세이카쿠"
+    }
+  ],
+  "미야지마": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Miyajima,_Hiroshima_Prefecture.jpg",
+      "artist": "Braveheart",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "file": "attractions/commons-611.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "페리에서 바라본 미야지마"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Miyajima_island_town.jpg",
+      "artist": "Malaiya",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "file": "attractions/commons-610.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "미야지마의 상점가"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Miyajima_island.jpg",
+      "artist": "Petr Vodička",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "file": "attractions/commons-612.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "세토 내해에서 바라본 미야지마섬"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Miyajima_,_%E5%AE%AE%E5%B3%B6_-_panoramio_(4).jpg",
+      "artist": "z tanuki",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+      "file": "attractions/commons-613.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "미야지마 해안"
+    }
+  ],
+  "시로가네 공원": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Shirogane-no-Taki_Falls,_Ginzan_Onsen.jpg",
+      "artist": "lumoplank",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "file": "attractions/commons-628.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "긴잔온천 시로가네 폭포"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:%E9%8A%80%E5%B1%B1%E6%B8%A9%E6%B3%89%EF%BC%88Ginzanonsen,_the_Shirogane_Falls%EF%BC%89_-_panoramio.jpg",
+      "artist": "pakku",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+      "file": "attractions/commons-615.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "시로가네 공원 입구의 폭포"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:%E7%99%BD%E9%8A%80%E3%81%AE%E6%BB%9D_Sirogane_Falls_-_panoramio.jpg",
+      "artist": "Tomofumi Sato",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "file": "attractions/commons-614.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "오바나자와의 시로가네 폭포"
+    }
+  ],
+  "사누키 우동": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Kama-age_sanuki_udon_by_sekido_in_Takamatsu,_Kagawa.jpg",
+      "artist": "sekido",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "file": "attractions/commons-617.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "다카마쓰에서 촬영한 가마아게 사누키 우동"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Sanuki_udon_by_open-arms.jpg",
+      "artist": "open-arms",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "file": "attractions/commons-618.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "사누키 우동 한 그릇"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Japanese_Sanuki_Udon.jpg",
+      "artist": "Shene81",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+      "file": "attractions/commons-620.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "사누키 우동 상차림"
+    }
+  ],
+  "유후인 료칸": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Makibanoie_Hotel_in_Yufuin_Hot_Spring.JPG",
+      "artist": "そらみみ",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "file": "attractions/commons-621.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "유후인 온천 거리의 료소 마키바노이에"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Yufuin_Onsen_-Mus%C5%8Den.jpg",
+      "artist": "Yasuhiro from Tokyo, Japan",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "file": "attractions/commons-622.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "유후인 무소엔의 노천탕"
+    }
+  ],
+  "스키장 및 스노보드 체험": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Sapporo_Kokusai_Ski_Resort_(40944680222).jpg",
+      "artist": "MIKI Yoshihito from Sapporo City,Hokkaido., JAPAN",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "file": "attractions/commons-625.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "삿포로 국제 스키장 설경"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:SAPPORO_KOKUSAI_ski_area._(24043490475).jpg",
+      "artist": "MIKI Yoshihito from Sapporo City,Hokkaido., JAPAN",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "file": "attractions/commons-627.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "겨울의 삿포로 국제 스키장"
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Sapporo_Kokusai_Skiing_Resort._(40093430085).jpg",
+      "artist": "MIKI Yoshihito from Sapporo City,Hokkaido., JAPAN",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "file": "attractions/commons-624.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "삿포로 국제 스키장 · 봄 촬영"
+    }
+  ],
+  "고래 관찰 투어": [
+    {
+      "source": "https://www.env.go.jp/nature/nationalparks/list/kerama-shoto/course/07/",
+      "original": "https://www.env.go.jp/nature/nationalparks/list/kerama-shoto/images/course/07/23_course_07_highlights_01.jpg",
+      "artist": "일본 환경성",
+      "license": "일본 공공데이터 이용약관 1.0",
+      "licenseUrl": "https://www.env.go.jp/nature/nationalparks/terms/",
+      "file": "attractions/kerama-2.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "게라마 제도에서 배를 타고 관찰하는 혹등고래",
+      "editedBy": "JAPAN TRIP 2027"
+    },
+    {
+      "source": "https://www.env.go.jp/nature/nationalparks/list/kerama-shoto/course/07/",
+      "original": "https://www.env.go.jp/nature/nationalparks/list/kerama-shoto/images/course/07/23_course_07_highlights_02.jpg",
+      "artist": "일본 환경성",
+      "license": "일본 공공데이터 이용약관 1.0",
+      "licenseUrl": "https://www.env.go.jp/nature/nationalparks/terms/",
+      "file": "attractions/kerama-3.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "수면을 꼬리로 치는 혹등고래",
+      "editedBy": "JAPAN TRIP 2027"
+    },
+    {
+      "source": "https://www.env.go.jp/nature/nationalparks/list/kerama-shoto/course/07/",
+      "original": "https://www.env.go.jp/nature/nationalparks/list/kerama-shoto/images/course/07/23_course_07_main.jpg",
+      "artist": "일본 환경성",
+      "license": "일본 공공데이터 이용약관 1.0",
+      "licenseUrl": "https://www.env.go.jp/nature/nationalparks/terms/",
+      "file": "attractions/kerama-1.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "게라마 해역의 혹등고래 꼬리",
+      "editedBy": "JAPAN TRIP 2027"
+    }
+  ],
+  "구마몬 스퀘어": [
+    {
+      "ai": true,
+      "source": "https://kumamoto-guide.jp/spots/detail/367",
+      "artist": "OpenAI ImageGen",
+      "license": "OpenAI 이용약관",
+      "licenseUrl": "https://openai.com/policies/terms-of-use/",
+      "file": "attractions/kumamon-square-illustration.webp",
+      "checkedOn": "2026-11-27",
+      "caption": "360도 무대와 카페를 소재로 그린 상상도"
     }
   ]
 };

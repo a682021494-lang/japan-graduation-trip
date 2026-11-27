@@ -2,21 +2,26 @@ import { attractionPhotos } from './data/attraction-photos.js';
 
 export function setupAttractionGallery({esc,link,dialog,body,main}){
   let photos=[], selected=0, name='', start;
+  const imageLabel=photo=>photo.ai?'AI 생성 일러스트':'사진';
   function preview(photo,title){
-    return `<img src="images/${esc(photo.file)}" width="640" height="360" loading="lazy" decoding="async" data-attraction-image alt="${esc(title)} 사진">`;
+    return `<img src="images/${esc(photo.file)}" width="640" height="360" loading="lazy" decoding="async" data-attraction-image alt="${esc(title)} ${imageLabel(photo)}">`;
   }
   function cover(title,index=0){
     const photo=attractionPhotos(title)[index];
     if(!photo)return '<p class="attraction-photo-empty">대표 사진 미확보</p>';
-    return `<button type="button" class="attraction-photo" data-photo-title="${esc(title)}" data-photo-index="${index}" aria-label="${esc(title)} ${index?index+1+'번째 ':''}사진 확대">${preview(photo,title)}</button>`;
+    const badge=photo.ai?'<span class="attraction-art-label">AI 생성 일러스트</span>':'';
+    return `<button type="button" class="attraction-photo" data-photo-title="${esc(title)}" data-photo-index="${index}" aria-label="${esc(title)} ${index?index+1+'번째 ':''}${imageLabel(photo)} 확대">${preview(photo,title)}${badge}</button>`;
   }
   function attribution(photo){
-    return `${link(photo.artist,photo.source)} · ${photo.licenseUrl?link(photo.license,photo.licenseUrl):esc(photo.license)} · WebP 변환`;
+    const credit=photo.ai?`AI 생성 일러스트 · ${esc(photo.artist)} · ${link('장소 참고',photo.source)}`:link(photo.artist,photo.source);
+    const sourceDetails=photo.original?` · ${link('원본 사진',photo.original)} · ${esc(photo.checkedOn)} 이용`:'';
+    const conversion=photo.editedBy?`${esc(photo.editedBy)} WebP 변환`:'WebP 변환';
+    return `${photo.caption?esc(photo.caption)+' · ':''}${credit}${sourceDetails} · ${photo.licenseUrl?link(photo.license,photo.licenseUrl):esc(photo.license)} · ${conversion}`;
   }
   function detail(title){
     const items=attractionPhotos(title);
     if(!items.length)return cover(title);
-    return `<section class="stack attraction-photo-section"><h2>관광지 사진</h2>
+    return `<section class="stack attraction-photo-section"><h2>${items[0].ai?'관광지 일러스트':'관광지 사진'}</h2>
       ${cover(title)}<small class="links">${attribution(items[0])}</small>
       ${items.length>1?`<div class="attraction-thumbnails">${items.slice(1).map((_,i)=>cover(title,i+1)).join('')}</div>`:''}
       </section>`;
@@ -24,7 +29,10 @@ export function setupAttractionGallery({esc,link,dialog,body,main}){
   function show(){
     const photo=photos[selected];
     body.querySelector('[data-gallery-error]').hidden=true;
-    body.querySelector('img').src='images/'+photo.file;
+    const image=body.querySelector('img');
+    image.alt=name+' '+imageLabel(photo);
+    image.src='images/'+photo.file;
+    body.querySelector('h2').textContent=name+' '+imageLabel(photo);
     body.querySelector('[data-photo-credit]').innerHTML=attribution(photo);
     body.querySelector('[data-photo-position]').textContent=(selected+1)+' / '+photos.length;
   }

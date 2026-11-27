@@ -171,7 +171,7 @@ test('초기 자료, 행정구역, 전국 검색 오류 후 재시도',async()=>
 }));
 
 
-test('attraction card photos, zoom, credits and unavailable state',async()=>inPage(profiles.iphone,async page=>{
+test('attraction card photos, zoom, swipe and credits',async()=>inPage(profiles.iphone,async page=>{
   await visit(page,'trip/osaka');
   const cover=page.getByRole('button',{name:'도톤보리 사진 확대',exact:true});
   await cover.waitFor();
@@ -209,7 +209,30 @@ test('attraction card photos, zoom, credits and unavailable state',async()=>inPa
   assert.equal(await position.textContent(),'1 / 3');
   await gallery.locator('img').evaluate(img=>img.decode());
   await page.getByRole('button',{name:'닫기',exact:true}).click();
-  await visit(page,'trip/sapporo');
-  const missing=page.locator('.attraction').filter({has:page.getByRole('link',{name:/스키장 및 스노보드 체험/})});
-  await missing.getByText('대표 사진 미확보',{exact:true}).waitFor();
+}));
+
+test('attraction follow-up photos and the labeled AI illustration',async()=>inPage(profiles.iphone,async page=>{
+  await visit(page,'place/tokyo/9');
+  const photo=page.getByRole('button',{name:'팀랩 플래닛 사진 확대',exact:true});
+  await photo.click();
+  const gallery=page.locator('dialog[open]');
+  await gallery.locator('img').evaluate(img=>img.decode());
+  assert.match(await gallery.locator('[data-photo-credit]').textContent(),/전시장 건물 외관/);
+  await page.getByRole('button',{name:'닫기',exact:true}).click();
+  await visit(page,'place/fukuoka/7');
+  await page.getByRole('button',{name:'라라포트 후쿠오카 사진 확대',exact:true}).click();
+  await gallery.locator('img').evaluate(img=>img.decode());
+  assert.match(await gallery.locator('[data-photo-credit]').textContent(),/플라워파크 출입구/);
+  await page.getByRole('button',{name:'닫기',exact:true}).click();
+  await visit(page,'trip/kumamoto');
+  const illustration=page.getByRole('button',{name:'구마몬 스퀘어 AI 생성 일러스트 확대',exact:true});
+  await illustration.getByText('AI 생성 일러스트',{exact:true}).waitFor();
+  await illustration.click();
+  await gallery.getByRole('heading',{name:'구마몬 스퀘어 AI 생성 일러스트',exact:true}).waitFor();
+  await gallery.getByRole('img',{name:'구마몬 스퀘어 AI 생성 일러스트'}).evaluate(img=>img.decode());
+  assert.match(await gallery.locator('[data-photo-credit]').textContent(),/OpenAI ImageGen/);
+  await page.getByRole('button',{name:'닫기',exact:true}).click();
+  await visit(page,'place/kumamoto/2');
+  await page.getByRole('heading',{name:'관광지 일러스트',exact:true}).waitFor();
+  await page.getByRole('link',{name:/장소 참고/}).waitFor();
 }));

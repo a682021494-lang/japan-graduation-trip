@@ -140,3 +140,8 @@ jobs:
           done
           echo "::error::The public website did not serve the deployed entry point and cache policy."
           exit 1
+      - name: Verify live attraction photo and illustration galleries
+        env:
+          TRIP_QA_URL: https://japan-graduation-trip-2027.web.app/
+          TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: node --test --test-name-pattern 'attraction' scripts/guest-browser.test.mjs
