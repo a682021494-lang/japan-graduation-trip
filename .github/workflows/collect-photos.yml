@@ -13,7 +13,7 @@ jobs:
         shell: bash
         run: |
           mkdir verified
-          curl -fSL --max-time 45 https://www.post.japanpost.jp/zipcode/dl/utf/zip/utf_ken_all.zip -o postal.zip
+          curl -fSL --max-time 45 https://www.post.japanpost.jp/service/search/zipcode/download/utf/zip/utf_ken_all.zip -o postal.zip
           unzip -oq postal.zip
           python - <<'PY'
           from pathlib import Path
