@@ -1,18 +1,36 @@
-name: Collect licensed attraction photos for review
+name: Check deployed attraction galleries in Chrome
 on:
   push:
     branches: [attraction-photo-research]
 permissions:
   contents: read
 jobs:
-  collect:
-    runs-on: ubuntu-latest
+  check-gallery:
     timeout-minutes: 10
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: pip install Pillow requests
-      - run: python collect-photos.py
-      - uses: actions/upload-artifact@v4
         with:
-          name: attraction-photos-review
-          path: collected/
+          ref: 49a8ee0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Wait for the target Hosting version
+        shell: bash
+        run: |
+          for attempt in {1..26}; do
+            if curl --fail --silent --show-error --max-time 10 'https://japan-graduation-trip-2027.web.app/data/reviewed-attraction-photos.js?release=49a8ee0' -o "$RUNNER_TEMP/live-catalog" &&
+               cmp -s dist/data/reviewed-attraction-photos.js "$RUNNER_TEMP/live-catalog"; then
+              exit 0
+            fi
+            sleep 15
+          done
+          exit 1
+      - name: Test the live gallery, photo swipes and license links
+        env:
+          TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
+          TRIP_QA_URL: https://japan-graduation-trip-2027.web.app/
+        run: node --test --test-name-pattern 'attraction card' scripts/guest-browser.test.mjs
