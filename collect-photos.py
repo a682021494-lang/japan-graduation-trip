@@ -1,6 +1,6 @@
 import concurrent.futures, html, io, json, re, time
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit, urlunsplit
 import requests
 from PIL import Image, ImageOps
 candidate_file=Path('photo-candidates.tsv')
@@ -50,7 +50,7 @@ for name, filenames in extras.items():
 def get(item):
     i,(name,article)=item
     filename=titles.get(article)
-    if not filename:return None
+    if not filename or not re.search(r'\.(jpe?g|webp|png)$',filename,re.I) or re.search(r'logo|locator|location.map|emblem|coat.of.arms',filename,re.I):return None
     try:
         page=api('commons.wikimedia.org',action='query',prop='imageinfo',iiprop='url|extmetadata',iiurlwidth=960,titles='File:'+filename)[0]
         info=page['imageinfo'][0];meta=info.get('extmetadata',{})
@@ -67,9 +67,9 @@ def get(item):
         for url in dict.fromkeys(filter(None,[info.get('thumburl'),info.get('url')])):
             if url.startswith('//'):url='https:'+url
             if url.startswith('http://upload.wikimedia.org/'):url=url.replace('http://','https://',1)
-            if not url.startswith('https://upload.wikimedia.org/'):
+            if not url.startswith(('https://upload.wikimedia.org/','https://thumb.wikimedia.org/')):
                 print('Unexpected image host:',i,url[:180]);continue
-            response=requests.get(url,headers=session_headers,timeout=18)
+            response=requests.get(url.split('?',1)[0],headers=session_headers,timeout=18)
             if response.ok:
                 r=response
                 break
@@ -80,7 +80,7 @@ def get(item):
         return i,{'name':name,'article':article,'file':nameout,'source':info['descriptionurl'],'artist':artist,'license':license,'licenseUrl':license_url,'filename':page['title']}
     except Exception as error:
         print(i,filename,str(error)[:200]);return None
-with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
     for result in pool.map(get,enumerate(candidates,1)):
         if result:photos[result[0]]=result[1]
 (output/'candidates.json').write_text(json.dumps(photos,ensure_ascii=False,indent=2))
