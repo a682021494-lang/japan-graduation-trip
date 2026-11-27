@@ -63,9 +63,18 @@ def get(item):
             print('License or credit skipped:',i,filename,license,bool(artist));return None
         if license.startswith('CC') and not license_url.startswith('https://creativecommons.org/'):
             print('License URL skipped:',i,filename,license,license_url);return None
-        url=info.get('thumburl') or info['url']
-        if not url.startswith('https://upload.wikimedia.org/'):return None
-        r=requests.get(url,headers=session_headers,timeout=18);r.raise_for_status()
+        r=None
+        for url in dict.fromkeys(filter(None,[info.get('thumburl'),info.get('url')])):
+            if url.startswith('//'):url='https:'+url
+            if url.startswith('http://upload.wikimedia.org/'):url=url.replace('http://','https://',1)
+            if not url.startswith('https://upload.wikimedia.org/'):
+                print('Unexpected image host:',i,url[:180]);continue
+            response=requests.get(url,headers=session_headers,timeout=18)
+            if response.ok:
+                r=response
+                break
+            print('Image unavailable:',i,response.status_code,url[:180])
+        if r is None:return None
         img=ImageOps.exif_transpose(Image.open(io.BytesIO(r.content))).convert('RGB');img.thumbnail((1000,850))
         nameout=f'commons-{i:03d}.webp';img.save(output/'images'/nameout,'WEBP',quality=77,method=6)
         return i,{'name':name,'article':article,'file':nameout,'source':info['descriptionurl'],'artist':artist,'license':license,'licenseUrl':license_url,'filename':page['title']}
