@@ -93,7 +93,7 @@ def get(item):
     except Exception as error:
         print(i,filename,str(error)[:200]);return None
 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-    for result in pool.map(get,enumerate(candidates,201)):
+    for result in pool.map(get,enumerate(candidates,401)):
         if result:photos[result[0]]=result[1]
 (output/'candidates.json').write_text(json.dumps(photos,ensure_ascii=False,indent=2))
 from PIL import ImageDraw
