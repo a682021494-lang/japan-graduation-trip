@@ -105,9 +105,27 @@ test('47개 행정구역 파일의 상·하위 코드와 관광지 참조가 유
   }
   const groups=await Promise.all(keys.map(async key=>JSON.parse(await read('data/areas/'+key+'.json'))));
   const index=new Map(groups.flat().map(row=>[row[0],row]));
+  assert.equal(groups.flat().length,2283);
   assert.equal(index.size,2283);
+  const suffixes={city:'시',special:'구',ward:'구',county:'군',town:'정',village:'촌'};
   for(const [code,row] of index){
     if(row[5])assert.equal(index.get(row[5])?.[0].slice(0,2),code.slice(0,2));
+    assert.match(row[3],/^[가-힣]+$/,code);
+    assert(row[3].endsWith(suffixes[row[4]]),code);
+    assert.match(row[2],/[a-z]/i,code);
+    assert.match(row[8],/^[ぁ-ゖ]+$/,code);
+  }
+  const search=JSON.parse(await read('data/areas/index.json'));
+  assert.deepEqual(search,groups.flat().map(row=>[...row.slice(0,4),row[5],row[8]]));
+  for(const [code,kana,korean] of [
+    ['25201','おおつし','오쓰시'],['25202','ひこねし','히코네시'],
+    ['13113','しぶやく','시부야구'],['10420','あがつまぐん','아가쓰마군'],
+    ['10426','くさつまち','구사쓰정'],['21604','しらかわむら','시라카와촌'],
+    ['01100','さっぽろし','삿포로시'],['22139','はまなく','하마나구'],
+    ['27220','みのおし','미노오시'],['33212','せとうちし','세토우치시'],
+  ]){
+    assert.equal(index.get(code)?.[3],korean,code);
+    assert.equal(index.get(code)?.[8],kana,code);
   }
   const places=JSON.parse(await read('data/areas/places.json'));
   const guides=JSON.parse(await read('data/areas/guides.json'));

@@ -49,6 +49,8 @@ Noto Sans KR을 일부 문자로 축소해 로컬에 포함했습니다. [Google
 
 - 행정구역 이름·코드는 일본 e-Stat의 표준 지역 코드에 근거한 2025년 3월 정리본의 사실정보를 사용했습니다. 정령지정도시의 행정구와 도쿄의 특별구를 구분했습니다. 군은 정·촌을 묶는 탐색용 분류이며, 홋카이도의 일부 군 식별자는 내부 분류용입니다. [e-Stat](https://www.e-stat.go.jp/municipalities/cities) · [정리본](https://github.com/OtterSou/japan-municipalities)
 - 지자체 홈페이지와 청사 위치는 CC0로 공개된 localgovjp에서 가져왔습니다. 하마마쓰 개편 구역의 표시는 이전 청사 위치 참조입니다. 일본 정부의 통상 집계 범위인 1,741개 시정촌·특별구와 정령지정도시의 행정구 171개를 수록했습니다. [localgovjp](https://github.com/code4fukui/localgovjp)
+- 2026년 11월 27일에 기존 시·특별구·행정구·군·정·촌 2,283개의 일본어 읽기를 행정구역 코드와 원문으로 연결하고 일본우편의 전국 주소 가나 자료와 대조했습니다. 일본우편에서는 스에정의 한자를 `須惠町`으로 쓰고 미즈마군을 `みずまぐん`으로 적습니다. 사이트의 일본어 원문과 읽기 자료의 표기는 각각 `須恵町`, `みづまぐん`입니다. 두 표기 차이는 한글 이름에 영향을 주지 않습니다. [읽기 자료](https://github.com/OtterSou/japan-municipalities/blob/a7852b8670c0a99e93710f3d550509f1b69f7f00/0-all.tsv) · [일본우편 전국 데이터](https://www.post.japanpost.jp/service/search/zipcode/download/utf-zip.html)
+- 한글 이름은 실제 일본어 읽기에 국립국어원의 일본어 표기 원칙을 적용했습니다. 합성 지명의 모음은 경계를 확인해 기타아키타시, 미노오시, 세토우치시처럼 표기했습니다. `dist/data/areas/NN.json`에는 한글과 일본어 읽기를, 전국 검색 목록에는 일본어 원문·읽기·한글·기존 영문을 수록합니다. [외래어 표기법](https://www.korean.go.kr/kornorms/regltn/regltnView.do?regltn_code=0003) · [미노오시 생활 가이드](https://portal.mafga.or.jp/ko/living-guide) · [밀양시 세토우치시 안내](https://www.miryang.go.kr/web/index.do?mnNo=40402010000)
 - 신규 상세 관광지 10개는 해당 공식 시설·관광기관 URL과 확인 날짜를 함께 표시합니다. 지도 점은 탐색용 근삿값이며, 미확인 필드는 미확인으로 표시합니다. 다른 지역의 상세 관광 정보는 기존 가이드 범위에서만 제공합니다.
 
 - 47개 도도부현의 JNTO 관광 가이드 링크를 권역별로 열어 확인했습니다. 확인일과 주소는 `dist/data/areas/tourism.json`에 기록합니다. 사이트의 8개 권역 분류를 사용하며, JNTO는 주부와 규슈·오키나와를 세분화합니다.

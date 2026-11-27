@@ -119,6 +119,10 @@ jobs:
                cmp -s dist/style.css "$RUNNER_TEMP/hosting-style" &&
                curl --fail --silent --show-error --max-time 15 "$origin/data/areas/prefectures.json" -o "$RUNNER_TEMP/hosting-prefectures" &&
                cmp -s dist/data/areas/prefectures.json "$RUNNER_TEMP/hosting-prefectures" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/data/areas/index.json" -o "$RUNNER_TEMP/hosting-area-search" &&
+               cmp -s dist/data/areas/index.json "$RUNNER_TEMP/hosting-area-search" &&
+               curl --fail --silent --show-error --max-time 15 "$origin/data/areas/25.json" -o "$RUNNER_TEMP/hosting-shiga" &&
+               cmp -s dist/data/areas/25.json "$RUNNER_TEMP/hosting-shiga" &&
                curl --fail --silent --show-error --max-time 15 "$origin/logic.js" -o "$RUNNER_TEMP/hosting-logic" &&
                cmp -s dist/logic.js "$RUNNER_TEMP/hosting-logic" &&
                curl --fail --silent --show-error --max-time 15 "$origin/cloud-ui.js" -o "$RUNNER_TEMP/hosting-cloud-ui" &&
@@ -140,8 +144,8 @@ jobs:
           done
           echo "::error::The public website did not serve the deployed entry point and cache policy."
           exit 1
-      - name: Verify live attraction photo and illustration galleries
+      - name: Verify live administrative search and attraction galleries
         env:
           TRIP_QA_URL: https://japan-graduation-trip-2027.web.app/
           TRIP_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
-        run: node --test --test-name-pattern 'attraction' scripts/guest-browser.test.mjs
+        run: node --test --test-name-pattern 'attraction|localized administrative' scripts/guest-browser.test.mjs

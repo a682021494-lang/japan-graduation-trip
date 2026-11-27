@@ -1,8 +1,13 @@
 const folder='data/areas/';
-const labels={city:'시',special:'특별구',ward:'행정구',county:'군',town:'정',village:'촌'};
-const norm=value=>String(value).normalize('NFKC').normalize('NFD').replace(/\p{Diacritic}|[\s·-]/gu,'').toLowerCase();
+const norm=value=>String(value).normalize('NFKC')
+  .replace(/[ァ-ヶ]/g,kana=>String.fromCharCode(kana.charCodeAt(0)-0x60))
+  .normalize('NFD').replace(/(\p{Script=Latin})\p{M}+|[\s·-]/gu,'$1').toLowerCase();
 const prefKey=value=>String(Number(value)||0).padStart(2,'0');
 export const koreanPrefectureName=({id,name})=>name+({1:'',13:'도',26:'부',27:'부'}[id]??'현');
+const compareKorean=new Intl.Collator('ko').compare;
+const bilingual=(korean,japanese)=>korean&&japanese?`${korean} (${japanese})`:korean||japanese;
+const areaName=([,japanese,,korean])=>bilingual(korean,japanese);
+const byAreaName=(a,b)=>compareKorean(a[3]||a[1],b[3]||b[1])||a[0].localeCompare(b[0]);
 const safeCode=value=>/^\d{5}$/.test(value||'')?value:'';
 const noValue='미확인';
 const areaSource='https://www.e-stat.go.jp/municipalities/cities';
@@ -40,8 +45,7 @@ export function setupGeography({main,esc,select,page,link,fetchJSON,attractionCo
     const local=db()[localId]?.area===code?db()[localId]:null;
     return {pref,rows,row,place,code,id,local,localId};
   }
-  const name=r=>r[3]?r[3]+' · '+r[1]:r[1]+' · '+r[2];
-  const short=r=>r[3]||r[1];
+  const prefectureName=p=>bilingual(koreanPrefectureName(p),getPrefectureNames()[prefKey(p.id)]);
   const maps=query=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(query);
   const https=url=>typeof url==='string'&&/^https:\/\//i.test(url);
   const searchForm=()=>`<label>지역·관광지 검색 <input data-area-search type="search" placeholder="예: 시부야, 草津, Otaru" value="${esc(searchText)}"></label><div class="area-results" data-area-results>${searchResults()}</div>`;
@@ -50,8 +54,8 @@ export function setupGeography({main,esc,select,page,link,fetchJSON,attractionCo
     if(!q)return '';
     const d=getData();
     const matches=values=>values.some(v=>v&&norm(v).includes(q));
-    const prefectures=d.prefectures.filter(p=>matches([p.name,getPrefectureNames()[prefKey(p.id)]]))
-      .slice(0,8).map(p=>[href(p.id),p.region+' · '+p.name]);
+    const prefectures=d.prefectures.filter(p=>matches([koreanPrefectureName(p),getPrefectureNames()[prefKey(p.id)]]))
+      .sort((a,b)=>compareKorean(a.name,b.name)).slice(0,8).map(p=>[href(p.id),prefectureName(p)+' · '+p.region]);
     const places=Object.entries(db()).filter(([,p])=>matches([p.name,p.ja,p.local,p.localJa]))
       .slice(0,10).map(([id,p])=>[placeHref(id),p.name+' · '+p.ja]);
     const documented=new Set(Object.values(db()).flatMap(p=>(p.links||[]).map(([guide,index])=>guide+'/'+index)));
@@ -59,9 +63,10 @@ export function setupGeography({main,esc,select,page,link,fetchJSON,attractionCo
       .filter(([guide,i,name])=>matches([name])&&!documented.has(guide.id+'/'+i)).slice(0,8)
       .map(([g,i,name])=>[placeHref(g.id+'/'+i),name+' · '+g.name]);
     const index=entries.get('index');
-    const municipalities=index?index.filter(r=>matches(r.slice(1))).slice(0,18).map(r=>{
+    const municipalities=index?index.filter(r=>matches([r[1],r[2],r[3],r[5]])).sort(byAreaName).slice(0,18).map(r=>{
       const pref=d.prefectures.find(p=>p.id===Number(r[0].slice(0,2)));
-      return [href(pref.id,r[0]),[pref.name,r[3]||r[1],r[2]].join(' · ')];
+      const parent=r[4]&&index.find(area=>area[0]===r[4]);
+      return [href(pref.id,r[0]),[areaName(r),koreanPrefectureName(pref),parent&&areaName(parent)].filter(Boolean).join(' · ')];
     }):[];
     const regions=d.regions.flatMap((name,i)=>matches([name])?[[`#map/region/${i}`,name]]:[]);
     const guides=[...d.destinations,...d.cities].filter(g=>matches([g.name])).slice(0,10)
@@ -102,10 +107,10 @@ export function setupGeography({main,esc,select,page,link,fetchJSON,attractionCo
     const p=d.prefectures.find(p=>p.id===Number(pref));
     if(p)load(pref);
     const region=p?.region||(!p&&location.hash.startsWith('#map/region/')?d.regions[Number(location.hash.split('/')[2])]:null);
-    const prefectures=d.prefectures.filter(item=>!region||item.region===region);
-    const top=rows.filter(r=>!r[5]);
+    const prefectures=d.prefectures.filter(item=>!region||item.region===region).sort((a,b)=>compareKorean(a.name,b.name));
+    const top=rows.filter(r=>!r[5]).sort(byAreaName);
     const parent=row?.[5]?rows.find(r=>r[0]===row[5]):row;
-    const children=parent?rows.filter(r=>r[5]===parent[0]):[];
+    const children=parent?rows.filter(r=>r[5]===parent[0]).sort(byAreaName):[];
     const topValue=parent?.[0]||'';
     const childValue=row?.[5]?row[0]:'';
     const guides=[...d.destinations,...d.cities].filter(g=>g.pref===Number(pref)&&(!row||
@@ -116,15 +121,14 @@ export function setupGeography({main,esc,select,page,link,fetchJSON,attractionCo
     for(const [id,site] of sites)if(site.local&&!neighborhoods.has(site.local))neighborhoods.set(site.local,id);
     const chosenLocal=local||place;
     const visibleSites=chosenLocal?.local?sites.filter(([,site])=>site.local===chosenLocal.local):sites;
-    const ja=getPrefectureNames()[pref];
-    const trail=[region,p&&koreanPrefectureName(p),parent&&short(parent),
-      childValue&&short(row),chosenLocal?.local,place?.name].filter(Boolean);
+    const trail=[region,p&&prefectureName(p),parent&&areaName(parent),
+      childValue&&areaName(row),chosenLocal?.local,place?.name].filter(Boolean);
     return `<div class="panel stack area-panel"><h2>행정구역 탐색</h2>${searchForm()}
       <form data-area-filters class="stack">
       ${select('권역','region',[['','전체 권역'],...d.regions.map((name,index)=>[index,name])],region?d.regions.indexOf(region):'')}
-      ${select('도도부현','pref',[['0','선택하세요'],...prefectures.map(item=>[item.id,item.id===p?.id&&ja?item.name+' · '+ja:item.name])],Number(pref))}
-      ${p&&top.length?select('시·특별구·군·정·촌','area',[['','전체'],...top.map(r=>[r[0],name(r)+' ('+labels[r[4]]+')'])],topValue):''}
-      ${children.length?select(parent[4]==='county'?'소속 정·촌':'행정구','child',[['','전체'],...children.map(r=>[r[0],name(r)])],childValue):''}
+      ${select('도도부현','pref',[['0','선택하세요'],...prefectures.map(item=>[item.id,prefectureName(item)])],Number(pref))}
+      ${p&&top.length?select('시·특별구·군·정·촌','area',[['','전체'],...top.map(r=>[r[0],areaName(r)])],topValue):''}
+      ${children.length?select(parent[4]==='county'?'소속 정·촌':'행정구','child',[['','전체'],...children.map(r=>[r[0],areaName(r)])],childValue):''}
       ${row&&neighborhoods.size?select('관광 지역·거리','local',[['','전체'],...[...neighborhoods].map(([name,id])=>[id,name])],neighborhoods.get(chosenLocal?.local)||''):''}
       ${visibleSites.length?select('관광지 위치','place',[['','선택하세요'],...visibleSites.map(([id,s])=>[id,s.name])],place?id:''):''}
       </form>
@@ -151,7 +155,7 @@ ${p?tourismLink(p.id):''}
     if(!code)return '';
     load(code.slice(0,2));
     const row=entries.get(code.slice(0,2))?.find(r=>r[0]===code);
-    return `<a class="btn" href="${href(code.slice(0,2),code)}">${row?esc(short(row))+' · '+esc(row[1])+' 지도':'행정구역 지도'}</a>
+    return `<a class="btn" href="${href(code.slice(0,2),code)}">${row?esc(areaName(row))+' 지도':'행정구역 지도'}</a>
       ${https(row?.[7])?`<span class="links">${link('지자체 홈페이지',row[7])}</span>`:''} ${tourismLink(d.pref)}`;
   }
   function curated(id,g,n){
@@ -215,5 +219,9 @@ ${p?tourismLink(p.id):''}
     if(searchText.trim())load('index',updateSearch);
     updateSearch();
   }
-  return {mapPanel,explorePanel,recommendations,guideLink,change,input,coordinate,selectedPlace:()=>{const {place,id}=current();return place?{place,id}:null;},detail,curated,loadPlaces:()=>load('places')};
+  function selectedAreaName(){
+    const {row}=current();
+    return row?areaName(row):'';
+  }
+  return {mapPanel,explorePanel,recommendations,guideLink,change,input,coordinate,selectedAreaName,selectedPlace:()=>{const {place,id}=current();return place?{place,id}:null;},detail,curated,loadPlaces:()=>load('places')};
 }

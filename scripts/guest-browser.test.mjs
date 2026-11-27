@@ -154,6 +154,47 @@ test('전국 지도 툴팁, 확대, 하위 지역·관광지와 검색 중복 �
   await page.getByText(/히로사키성 천수 · 내부 관람 중지/).waitFor();
 }));
 
+for(const device of ['desktop','iphone']){
+  test(`localized administrative map names and three-language search (${device})`,async()=>inPage(profiles[device],async page=>{
+    await visit(page,'map/25');
+    const area=page.locator('[data-area-filters] select[name="area"]');
+    await area.locator('option[value="25201"]').waitFor({state:'attached'});
+    assert.equal(await area.locator('option[value="25201"]').textContent(),'오쓰시 (大津市)');
+    assert.equal(await area.locator('option[value="25202"]').textContent(),'히코네시 (彦根市)');
+    const names=(await area.locator('option').allTextContents()).slice(1);
+    assert(names.every(name=>/^[가-힣]+ \([^()]+\)$/.test(name)),names.join(', '));
+    assert.deepEqual(names,[...names].sort((a,b)=>a.localeCompare(b,'ko')));
+    await area.selectOption('25201');
+    await page.getByLabel('탐색 경로').filter({hasText:'시가현 (滋賀県) → 오쓰시 (大津市)'}).waitFor();
+    await page.locator('[data-selected-area]').getByText('오쓰시 (大津市)',{exact:true}).waitFor();
+    await page.locator('svg circle title').filter({hasText:'오쓰시 (大津市)'}).waitFor({state:'attached'});
+    const query=page.locator('[data-area-search]');
+    const result=page.locator('[data-area-results] a[href="#map/25/25201"]');
+    for(const term of ['오쓰시','大津市','おおつし','オオツシ','Otsu']){
+      await query.fill(term);
+      await result.waitFor();
+      assert.equal(await result.textContent(),'오쓰시 (大津市) · 시가현');
+    }
+    await query.fill('시');
+    const matchingAreas=await page.locator('[data-area-results] a').evaluateAll(links=>links
+      .filter(link=>/^#map\/\d+\/\d{5}$/.test(link.hash)).map(link=>link.textContent.split(' (')[0]));
+    assert.equal(matchingAreas.length,18);
+    assert.deepEqual(matchingAreas,[...matchingAreas].sort((a,b)=>a.localeCompare(b,'ko')));
+    await query.fill('시부야');
+    await page.locator('[data-area-results] a[href="#map/13/13113"]').click();
+    await page.getByLabel('탐색 경로').filter({hasText:'도쿄도 (東京都) → 시부야구 (渋谷区)'}).waitFor();
+    await visit(page,'map/10/10420');
+    const child=page.locator('[data-area-filters] select[name="child"]');
+    await child.selectOption('10426');
+    assert.equal(await child.locator('option:checked').textContent(),'구사쓰정 (草津町)');
+    await page.getByLabel('탐색 경로').filter({hasText:'아가쓰마군 (吾妻郡) → 구사쓰정 (草津町)'}).waitFor();
+    await visit(page,'map/27/27100');
+    await child.selectOption('27128');
+    await page.getByLabel('탐색 경로').filter({hasText:'오사카시 (大阪市) → 주오구 (中央区)'}).waitFor();
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  }));
+}
+
 test('초기 자료, 행정구역, 전국 검색 오류 후 재시도',async()=>inPage(profiles.desktop,async page=>{
   for(const data of ['data/trips.json','data/areas/10.json','data/areas/index.json']){
     await page.route('**/'+data,route=>route.fulfill({status:503}),{times:1});

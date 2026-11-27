@@ -200,6 +200,7 @@ function mapPage() {
   const recommended=geo.recommendations(selection.mapPref);
   const d = recommended.find(guide=>guide.id===selection.mapId);
   const locationPoint=geo.coordinate();
+  const areaLabel=geo.selectedAreaName();
   const polygons = data.prefectures.map(p=>`<path class="pref ${p.id===selection.mapPref?'active':''}" d="${paths[p.id]}" fill="${regionsColors[data.regions.indexOf(p.region)]}" tabindex="0" role="button" aria-label="${esc(koreanPrefectureName(p))} · ${esc(prefectureNames[String(p.id).padStart(2,'0')])} · ${esc(p.region)}" data-action="map-pref" data-index="${p.id}"></path>`).join('');
   const pins = recommended.map(d=>{
     const [cx,cy]=project(d.xy);
@@ -210,10 +211,11 @@ function mapPage() {
   const sheet=summary&&!selection.dismissMapDetails?`<aside class="mobile-map-details" aria-label="선택한 여행지">
     <div class="row"><h2>${esc(summary.name)}</h2>${btn('닫기','map-close-details','','')}</div>
     <p>${esc(summary.text)}</p><a class="btn primary" href="${summary.url}">상세 보기</a></aside>`:'';
-  const selectedPin=locationPoint?(()=>{const [cx,cy]=project(locationPoint);return `<circle cx="${cx}" cy="${cy}" r="6" fill="#bd322d" stroke="#fff" stroke-width="2" ${site?'data-action="map-show-details" tabindex="0" role="button" aria-label="선택한 여행지 보기"':''}><title>선택한 위치</title></circle>`;})():'';
+  const selectedPin=locationPoint?(()=>{const [cx,cy]=project(locationPoint);return `<circle cx="${cx}" cy="${cy}" r="6" fill="#bd322d" stroke="#fff" stroke-width="2" ${site?'data-action="map-show-details" tabindex="0" role="button" aria-label="선택한 여행지 보기"':''}><title>${esc(site?'선택한 위치':areaLabel||'선택한 위치')}</title></circle>`;})():'';
   return page('MAP','일본 지도','지도의 도도부현이나 도시를 선택해 위치와 여행 경비를 확인하세요.',`<div class="two">
   <section class="panel stack"><div class="row"><button class="icon" data-action="map-zoom" data-index="1" aria-label="지도 확대">+</button><button class="icon" data-action="map-zoom" data-index="-1" aria-label="지도 축소">−</button>${btn('전체 보기','map-reset')} ${selection.zoom>1?['←','→','↑','↓'].map((a,i)=>`<button class="icon" data-action="map-pan" data-index="${i}" aria-label="지도 ${['왼쪽','오른쪽','위','아래'][i]} 이동">${a}</button>`).join(''):''}</div>
   <div class="map-shell"><svg viewBox="${viewBox(selection.zoom,selection.center)}" aria-label="일본 47개 도도부현 지도"><path d="M25 427H196V523H25Z" fill="none" stroke="#8aa5bb" stroke-dasharray="3 3"/><text x="30" y="440" fill="#617d93" font-size="9">오키나와 (삽입도)</text>${polygons}${pins}${selectedPin}</svg><div id="map-tooltip" class="map-tooltip" role="tooltip" hidden></div></div>
+  ${areaLabel?`<small data-selected-area>${esc(areaLabel)}</small>`:''}
   <div class="tags">${data.regions.map((r,i)=>`<span style="background:${regionsColors[i]}">${r}</span>`).join('')}</div>
   <small>출처 · 일본 국토지리원 지구지도 일본, Data of Japan. 오키나와는 삽입도입니다.</small></section>
   <aside class="stack">${geo.mapPanel()}<div class="panel stack">
