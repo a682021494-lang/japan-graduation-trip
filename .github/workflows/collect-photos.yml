@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install requests pillow
-      - run: python collect-photos.py
+      - run: python public-license-candidates.py
       - uses: actions/upload-artifact@v4
         with:
           name: attraction-followup-photos
