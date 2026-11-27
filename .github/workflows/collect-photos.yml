@@ -1,32 +1,53 @@
-name: Cross-check Japanese administrative readings
+name: Recheck WebKit offline gallery
 on:
   push:
     branches: [attraction-photo-research]
 permissions:
   contents: read
 jobs:
-  postal-data:
+  check-webkit:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 7
     steps:
-      - name: Read Japan Post municipal kana data
+      - uses: actions/checkout@v4
+        with:
+          ref: 9f399729a48dafa8fb8f3d4b75da31b1801de96f
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci && npm run build
+      - run: npx playwright install --with-deps webkit
+      - name: Reproduce the offline image check in isolation
         shell: bash
         run: |
-          mkdir verified
-          curl -fSL --max-time 45 https://www.post.japanpost.jp/service/search/zipcode/download/utf/zip/utf_ken_all.zip -o postal.zip
-          unzip -oq postal.zip
-          python - <<'PY'
+          python3 - <<'PY'
           from pathlib import Path
-          import csv
-          source = next(Path('.').glob('*.csv'))
-          with source.open(encoding='utf-8-sig', newline='') as stream:
-              rows = sorted({(row[0],row[3],row[4],row[6],row[7]) for row in csv.reader(stream)})
-          with open('verified/japan-post-municipalities.tsv','w',encoding='utf-8',newline='') as stream:
-              csv.writer(stream,delimiter='\t').writerows(rows)
-          print(len(rows))
+          p=Path('scripts/mobile-pwa.test.mjs')
+          s=p.read_text().replace("await page.waitForFunction(()=>{\n      const image=document.querySelector('dialog[open] .attraction-gallery-image');\n      return image?.complete&&image.naturalWidth>0;\n    });", """try {
+                await page.waitForFunction(()=>{
+                  const image=document.querySelector('dialog[open] .attraction-gallery-image');
+                  return image?.complete&&image.naturalWidth>0;
+                }, null, {timeout:6000});
+              } catch (error) {
+                console.log(await page.evaluate(async()=>{
+                  const dialog=document.querySelector('dialog[open]');
+                  const image=dialog?.querySelector('img');
+                  const src=image?.getAttribute('src');
+                  const cached=src&&await caches.match(new URL(src,document.baseURI).href);
+                  return {hash:location.hash,src,currentSrc:image?.currentSrc,width:image?.naturalWidth,complete:image?.complete,
+                    label:dialog?.querySelector('h2')?.textContent,shownError:dialog?.querySelector('[data-gallery-error]')?.hidden===false,
+                    controller:!!navigator.serviceWorker.controller,cached:cached?.status,cachedSize:cached&&(await cached.blob()).size};
+                }));
+                throw error;
+              }""")
+          p.write_text(s)
           PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: japan-post-municipality-readings
-          path: verified
-          retention-days: 1
+          successes=0
+          for attempt in {1..5}; do
+            if TRIP_QA_ENGINE=webkit node --test --test-name-pattern 'PWA manifest' scripts/mobile-pwa.test.mjs; then
+              successes=$((successes+1))
+            fi
+          done
+          test "$successes" = 5
